@@ -1,0 +1,204 @@
+/* nlc widget style - asad.to edition */
+:root {
+    --nlc-primary: #00b06b;
+    --nlc-primary-dark: #00965b;
+}
+
+#nlc-widget-container {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    z-index: 9999999;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.nlc-chat-bubble {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: var(--nlc-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 176, 107, 0.3);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+.nlc-chat-bubble:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 176, 107, 0.4);
+}
+
+.nlc-chat-bubble svg {
+    width: 30px;
+    height: 30px;
+    fill: white;
+}
+
+.nlc-notification-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    background: #ef4444;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: none;
+}
+
+.nlc-chat-window {
+    display: none;
+    width: 360px;
+    height: 580px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    flex-direction: column;
+    overflow: hidden;
+    position: absolute;
+    bottom: 75px;
+    right: 0;
+    opacity: 0;
+    transform: scale(0.95);
+    transform-origin: bottom right;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nlc-window-open {
+    display: flex !important;
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+.nlc-chat-header {
+    background: var(--nlc-primary);
+    color: white;
+    padding: 20px;
+}
+
+.nlc-chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8fafc;
+}
+
+.nlc-message {
+    max-width: 80%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.nlc-message-visitor {
+    background: var(--nlc-primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.nlc-message-agent {
+    background: white;
+    color: #1e293b;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+}
+
+.nlc-chat-input-area {
+    padding: 15px;
+    background: white;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+}
+
+.nlc-chat-input-area input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+.nlc-chat-input-area input:focus {
+    border-color: var(--nlc-primary);
+}
+
+.nlc-chat-input-area button {
+    background: var(--nlc-primary);
+    color: white;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nlc-chat-input-area button:hover {
+    background: var(--nlc-primary-dark);
+}
+
+.nlc-typing {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #fff;
+    border-radius: 14px;
+    align-self: flex-start;
+    border: 1px solid #f1f5f9;
+}
+
+.nlc-typing span {
+    width: 6px;
+    height: 6px;
+    background: #cbd5e1;
+    border-radius: 50%;
+    animation: nlcT 1.4s infinite;
+}
+
+.nlc-typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.nlc-typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes nlcT {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-4px);
+    }
+}
+
+@media (max-width: 480px) {
+    .nlc-chat-window {
+        width: calc(100vw - 40px);
+        height: 80vh;
+        bottom: 80px;
+    }
+}
