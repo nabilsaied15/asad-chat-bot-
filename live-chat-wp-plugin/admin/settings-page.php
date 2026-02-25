@@ -43,8 +43,34 @@ function nlc_settings_html() {
                         <td><input type="color" name="nlc_primary_color" value="<?php echo esc_attr( get_option('nlc_primary_color') ); ?>" /></td>
                     </tr>
                 </table>
-                <?php submit_button( 'Enregistrer' ); ?>
+                <?php submit_button( 'Enregistrer les modifications' ); ?>
             </form>
+
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
+                <h2 style="font-size: 18px; font-weight: 700;">Tester le Chat</h2>
+                <p>Cliquez sur le bouton ci-dessous pour tester le widget sur cette page.</p>
+                <button type="button" onclick="loadNlcWidget()" class="button button-secondary">Charger l'aperçu du Widget</button>
+            </div>
+            
+            <script>
+                function loadNlcWidget() {
+                    // Force the container if not exists
+                    if (!document.getElementById('nlc-widget-container')) {
+                        const div = document.createElement('div');
+                        div.id = 'nlc-widget-container';
+                        document.body.appendChild(div);
+                    }
+                    // Scripts are already enqueued in footer if plugin is active, 
+                    // but we can trigger a re-init if needed or just show the window.
+                    const bubble = document.getElementById('nlc-bubble');
+                    if (bubble) {
+                        bubble.click();
+                        alert("Le widget est déjà chargé ! Regardez en bas à droite.");
+                    } else {
+                        alert("Le widget n'est pas encore chargé sur cette page. Assurez-vous que l'extension est activée et rafraîchissez la page.");
+                    }
+                }
+            </script>
         </div>
     </div>
     <?php

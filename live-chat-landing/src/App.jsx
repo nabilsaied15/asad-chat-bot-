@@ -9,6 +9,10 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Inbox from './pages/Inbox';
 import Dashboard from './pages/Dashboard';
+import Monitoring from './pages/Monitoring';
+import Personnel from './pages/Personnel';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 
 const PrivateRoute = ({ children }) => {
   const user = localStorage.getItem('user');
@@ -48,6 +52,10 @@ function App() {
             {/* Private Routes */}
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/inbox" element={<PrivateRoute><Inbox /></PrivateRoute>} />
+            <Route path="/monitoring" element={<PrivateRoute><Monitoring /></PrivateRoute>} />
+            <Route path="/personnel" element={<PrivateRoute><Personnel /></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
 
             {/* Catch all redirect to home or login */}
             <Route path="*" element={<Navigate to="/" />} />

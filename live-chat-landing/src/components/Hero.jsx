@@ -44,6 +44,18 @@ const Hero = () => {
         return () => clearInterval(timer);
     }, [words]);
 
+    const handleTrackClick = async () => {
+        try {
+            await fetch('http://localhost:3000/api/stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_type: 'site_click', visitor_id: 'internal_agent' })
+            });
+        } catch (err) {
+            console.error('Erreur tracking:', err);
+        }
+    };
+
     return (
         <section style={{ padding: '120px 0 80px', textAlign: 'center', background: 'radial-gradient(circle at top, #f0fdf4 0%, #ffffff 100%)' }}>
             <div className="container">
@@ -166,7 +178,7 @@ const Hero = () => {
                     transition={{ delay: 0.8 }}
                     style={{ marginTop: '80px' }}
                 >
-                    <button className="btn btn-primary" style={{ padding: '18px 48px', fontSize: '18px', borderRadius: '16px' }}>
+                    <button onClick={handleTrackClick} className="btn btn-primary" style={{ padding: '18px 48px', fontSize: '18px', borderRadius: '16px' }}>
                         {t.hero.btn}
                     </button>
                     <p style={{ marginTop: '16px', fontSize: '14px', color: 'var(--text-muted)' }}>

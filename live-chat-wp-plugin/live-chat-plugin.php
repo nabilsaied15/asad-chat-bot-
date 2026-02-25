@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nabil Live Chat
  * Description: Un plugin de chat en direct (type Tawk.to) pour communiquer avec vos visiteurs en temps réel.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Nabil Asad
  */
 
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'NLC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NLC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'NLC_VERSION', '1.1.0' );
+define( 'NLC_VERSION', '1.1.1' );
 
 if ( is_admin() ) {
     require_once NLC_PLUGIN_DIR . 'admin/settings-page.php';

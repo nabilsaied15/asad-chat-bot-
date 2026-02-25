@@ -2,11 +2,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const container = document.getElementById('nlc-widget-container');
     if (!container) return;
 
-    // Use nlc_config if available, else defaults
+    // Configuration
     const primaryColor = (typeof nlc_config !== 'undefined' && nlc_config.primary_color) || '#00b06b';
     const serverUrl = (typeof nlc_config !== 'undefined' && nlc_config.server_url) || 'http://localhost:3000';
 
-    // Detect Language
+    console.log("[asad.to] Widget Init. Server:", serverUrl);
+
+    // Translations
     const lang = document.documentElement.lang.startsWith('en') ? 'en' : 'fr';
     const t = {
         fr: {
@@ -14,17 +16,22 @@ document.addEventListener("DOMContentLoaded", function () {
             welcome: "Bonjour ! Comment pouvons-nous vous aider ?",
             placeholder: "Écrivez un message...",
             send: "Envoyer",
-            poweredBy: "Propulsé par asad.to"
+            poweredBy: "Propulsé par asad.to",
+            statusOnline: "● En ligne",
+            statusConnecting: "○ Connexion...",
+            statusOffline: "○ Déconnecté"
         },
         en: {
             title: "asad.to Support",
             welcome: "Hello! How can we help you today?",
             placeholder: "Type a message...",
             send: "Send",
-            poweredBy: "Powered by asad.to"
+            poweredBy: "Powered by asad.to",
+            statusOnline: "● Online",
+            statusConnecting: "○ Connecting...",
+            statusOffline: "○ Offline"
         }
     };
-
     const trans = t[lang];
 
     container.style.setProperty('--nlc-primary', primaryColor);
@@ -36,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div style="width:32px;height:32px;background:white;border-radius:8px;color:var(--nlc-primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px">a.</div>
                     <div>
                         <h3 style="margin:0;font-size:16px;font-weight:700">${trans.title}</h3>
-                        <span style="font-size:11px;opacity:0.8">● En ligne</span>
+                        <span id="nlc-status" style="font-size:11px;opacity:0.8">${trans.statusConnecting}</span>
                     </div>
                 </div>
             </div>
@@ -64,6 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const input = document.getElementById('nlc-input');
     const msgs = document.getElementById('nlc-msgs');
     const send = document.getElementById('nlc-send');
+    const statusEl = document.getElementById('nlc-status');
     const dot = container.querySelector('.nlc-notification-dot');
 
     bubble.onclick = () => {
@@ -77,38 +85,73 @@ document.addEventListener("DOMContentLoaded", function () {
     const visitorId = localStorage.getItem('nlc_vid') || 'vis_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('nlc_vid', visitorId);
 
-    let socket = io(serverUrl);
+    // Socket Initialization logic
+    let socket;
 
-    socket.on('connect', () => {
-        socket.emit('register_visitor', {
-            visitorId,
-            url: window.location.href,
-            title: document.title,
-            browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Autre',
-            os: navigator.userAgent.includes('Win') ? 'Windows' : 'Autre'
-        });
-    });
-
-    socket.on('agent_message', (data) => {
-        addMsg(data.text, 'agent');
-        if (!win.classList.contains('nlc-window-open')) {
-            dot.style.display = 'block';
+    function initSocket() {
+        if (typeof io === 'undefined') {
+            console.error("[asad.to] 'io' is undefined. Socket.io library failed to load.");
+            statusEl.textContent = trans.statusOffline;
+            statusEl.style.color = "#ef4444";
+            return;
         }
-    });
 
-    socket.on('chat_history', (history) => {
-        if (history && history.length > 0) {
-            msgs.innerHTML = ''; // Clear welcome if history exists
-            history.forEach(msg => addMsg(msg.text, msg.sender === 'visitor' ? 'visitor' : 'agent'));
+        try {
+            socket = io(serverUrl, {
+                reconnectionAttempts: 10,
+                timeout: 5000,
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                console.log("[asad.to] Connected! VID:", visitorId);
+                statusEl.textContent = trans.statusOnline;
+                statusEl.style.color = "#10b981";
+                socket.emit('register_visitor', { visitorId, url: window.location.href, title: document.title });
+            });
+
+            socket.on('disconnect', () => {
+                statusEl.textContent = trans.statusOffline;
+                statusEl.style.color = "#ef4444";
+            });
+
+            socket.on('agent_message', (data) => {
+                addMsg(data.text, 'agent');
+                if (!win.classList.contains('nlc-window-open')) dot.style.display = 'block';
+            });
+
+            socket.on('chat_history', (history) => {
+                if (history && history.length > 0) {
+                    msgs.innerHTML = '';
+                    history.forEach(msg => addMsg(msg.text, msg.sender === 'visitor' ? 'visitor' : 'agent'));
+                }
+            });
+
+        } catch (e) {
+            console.error("[asad.to] Socket error:", e);
         }
-    });
+    }
 
-    socket.on('typing', (data) => {
-        if (data.isAgent) showTyping(); else hideTyping();
-    });
+    // Attempt to init immediately, or wait a bit if io is not ready
+    if (typeof io !== 'undefined') {
+        initSocket();
+    } else {
+        console.log("[asad.to] Waiting for Socket.io library...");
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (typeof io !== 'undefined') {
+                clearInterval(interval);
+                initSocket();
+            } else if (attempts > 50) {
+                clearInterval(interval);
+                console.error("[asad.to] Socket.io failed to load after 5 seconds.");
+                statusEl.textContent = trans.statusOffline;
+            }
+        }, 100);
+    }
 
     function addMsg(text, sender) {
-        hideTyping();
         const d = document.createElement('div');
         d.className = 'nlc-message nlc-message-' + sender;
         d.textContent = text;
@@ -116,20 +159,9 @@ document.addEventListener("DOMContentLoaded", function () {
         msgs.scrollTop = msgs.scrollHeight;
     }
 
-    function showTyping() {
-        if (document.getElementById('nlc-t')) return;
-        const d = document.createElement('div');
-        d.id = 'nlc-t'; d.className = 'nlc-typing';
-        d.innerHTML = '<span></span><span></span><span></span>';
-        msgs.appendChild(d);
-        msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function hideTyping() { const e = document.getElementById('nlc-t'); if (e) e.remove(); }
-
     function sendM() {
         const text = input.value.trim();
-        if (!text) return;
+        if (!text || !socket || !socket.connected) return;
         addMsg(text, 'visitor');
         socket.emit('visitor_message', { text, visitorId });
         input.value = '';

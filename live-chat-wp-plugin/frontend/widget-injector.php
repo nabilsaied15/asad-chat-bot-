@@ -2,11 +2,20 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'wp_enqueue_scripts', 'nlc_enqueue_assets' );
+add_action( 'admin_enqueue_scripts', 'nlc_enqueue_admin_assets' );
+
 function nlc_enqueue_assets() {
-    $url = get_option( 'nlc_server_url', 'http://localhost:3000' );
     wp_enqueue_style( 'nlc-css', NLC_PLUGIN_URL . 'frontend/assets/css/widget.css', [], NLC_VERSION );
-    wp_enqueue_script( 'nlc-socket-io', esc_url( rtrim( $url, '/' ) ) . '/socket.io/socket.io.js', [], null, true );
+    // Chargement de Socket.io depuis le CDN officiel en HTTPS pour éviter les erreurs de protocole
+    wp_enqueue_script( 'nlc-socket-io', 'https://cdn.socket.io/4.7.2/socket.io.min.js', [], '4.7.2', false );
     wp_enqueue_script( 'nlc-js', NLC_PLUGIN_URL . 'frontend/assets/js/widget.js', ['nlc-socket-io'], NLC_VERSION, true );
+}
+
+function nlc_enqueue_admin_assets( $hook ) {
+    // On ne charge que sur notre page de réglages pour ne pas polluer l'admin
+    if ( $hook !== 'toplevel_page_nlc-settings' ) return;
+    
+    nlc_enqueue_assets();
 }
 
 add_action( 'wp_footer', 'nlc_footer' );

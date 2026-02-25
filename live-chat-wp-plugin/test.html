@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Chat asad.to</title>
+    <!-- Chargement direct du Socket.io CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="live-chat-wp-plugin/frontend/assets/css/widget.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 24px;
+            color: #00b06b;
+            margin-bottom: 10px;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .status-ok {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .status-err {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #00b06b;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="logo">asad.to</div>
+        <h2 style="margin:0 0 10px 0">Console de Test Local</h2>
+        <p style="color: #64748b; font-size: 15px;">Utilisez cette page pour vérifier que votre chat fonctionne avant de
+            le mettre sur WordPress.</p>
+
+        <div class="status-box">
+            <div class="status-item">
+                <span>Bibliothèque Socket.io :</span>
+                <span id="check-io" class="status-err">Chargement...</span>
+            </div>
+            <div class="status-item">
+                <span>Serveur Backend (Port 3000) :</span>
+                <span id="check-server" class="status-err">Vérification...</span>
+            </div>
+        </div>
+
+        <p style="font-size: 13px; color: #94a3b8; margin-top: 20px;">
+            Si tout est au vert, la bulle apparaîtra en bas à droite.
+        </p>
+    </div>
+
+    <!-- Conteneur Widget -->
+    <div id="nlc-widget-container"></div>
+
+    <script>
+        // Diagnostic rapide
+        window.addEventListener('load', () => {
+            const ioOk = typeof io !== 'undefined';
+            const ioEl = document.getElementById('check-io');
+            ioEl.textContent = ioOk ? "OK" : "ERREUR";
+            ioEl.className = ioOk ? "status-ok" : "status-err";
+
+            fetch('http://localhost:3000/')
+                .then(() => {
+                    const srvEl = document.getElementById('check-server');
+                    srvEl.textContent = "OK";
+                    srvEl.className = "status-ok";
+                })
+                .catch(() => {
+                    const srvEl = document.getElementById('check-server');
+                    srvEl.textContent = "HORS LIGNE";
+                    srvEl.className = "status-err";
+                });
+        });
+    </script>
+
+    <!-- Chargement du Widget -->
+    <script src="live-chat-wp-plugin/frontend/assets/js/widget.js"></script>
+
+</body>
+
+</html>

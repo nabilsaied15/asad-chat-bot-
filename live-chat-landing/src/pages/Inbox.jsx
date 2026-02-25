@@ -3,11 +3,18 @@ import {
     MessageSquare,
     Search,
     MoreVertical,
+    Send,
+    Bell,
+    BellOff,
+    Monitor,
+    Users,
+    Shield,
     Maximize2,
     Paperclip,
     Smile,
-    Send
+    Activity
 } from 'lucide-react';
+
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -29,6 +36,11 @@ const InboxPage = () => {
             return;
         }
 
+        // Request Browser Notification Permission
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+
         fetchConversations();
 
         // Connect to socket as agent
@@ -37,6 +49,18 @@ const InboxPage = () => {
 
         socketRef.current.on('visitor_message', (data) => {
             fetchConversations();
+
+            // Trigger Browser Notification ONLY IF NOT MUTED
+            if (Notification.permission === 'granted' && !data.fromBot && !data.isMuted) {
+                new Notification(`Nouveau message asad.to`, {
+                    body: data.text,
+                    icon: '/favicon.ico'
+                });
+
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+                audio.play().catch(() => { });
+            }
+
             if (selectedChat && selectedChat.visitor_id === data.visitorId) {
                 setMessages(prev => [...prev, { sender: 'visitor', text: data.text, timestamp: Date.now() }]);
             }
@@ -44,6 +68,18 @@ const InboxPage = () => {
 
         return () => socketRef.current.disconnect();
     }, [navigate, selectedChat]);
+
+    // Handle Deep Linking from Notifications
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const vid = params.get('visitorId');
+        if (vid && conversations.length > 0) {
+            const target = conversations.find(c => c.visitor_id === vid);
+            if (target && (!selectedChat || selectedChat.visitor_id !== vid)) {
+                fetchMessages(target);
+            }
+        }
+    }, [conversations, window.location.search]);
 
     const fetchConversations = async () => {
         try {
@@ -61,8 +97,32 @@ const InboxPage = () => {
             const data = await res.json();
             setMessages(data);
             setSelectedChat(conv);
+
+            // Marquer comme lu
+            markAsRead(conv.id);
         } catch (err) {
             console.error('Failed to fetch messages');
+        }
+    };
+
+    const markAsRead = async (id) => {
+        try {
+            await fetch(`http://localhost:3000/api/conversations/${id}/read`, { method: 'PUT' });
+            fetchConversations(); // Rafraîchir les compteurs
+        } catch (err) {
+            console.error('Failed to mark as read');
+        }
+    };
+
+    const toggleMute = async () => {
+        if (!selectedChat) return;
+        try {
+            const res = await fetch(`http://localhost:3000/api/conversations/${selectedChat.id}/mute`, { method: 'PUT' });
+            const data = await res.json();
+            setSelectedChat(prev => ({ ...prev, is_muted: data.is_muted }));
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to toggle mute');
         }
     };
 
@@ -86,11 +146,24 @@ const InboxPage = () => {
             <DashboardNavbar />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
+                {/* Left Rail (Navigation) */}
+                <nav style={{ width: '64px', backgroundColor: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: '20px', zIndex: 10 }}>
+                    {JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' && (
+                        <>
+                            <div onClick={() => navigate('/dashboard')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Dashboard"><Monitor size={24} /></div>
+                            <div onClick={() => navigate('/monitoring')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Monitoring"><Users size={24} /></div>
+                            <div onClick={() => navigate('/reports')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Reports"><Activity size={24} /></div>
+                            <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
+                        </>
+                    )}
+                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px' }} title="Inbox"><MessageSquare size={24} /></div>
+                </nav>
+
                 {/* List Sidebar */}
                 <aside style={{ width: '320px', backgroundColor: 'white', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{t.inbox.title}</h2>
-                        <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'relative', marginBottom: '16px' }}>
                             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                             <input
                                 type="text"
@@ -113,11 +186,28 @@ const InboxPage = () => {
                                     borderLeft: selectedChat?.id === conv.id ? '4px solid #00b06b' : '4px solid transparent'
                                 }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '14px' }}>Visitor {conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}</span>
-                                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                                        {conv.last_message_time ? new Date(conv.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                    </span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>Visitor {conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}</span>
+                                        {conv.is_muted && <BellOff size={12} style={{ color: '#9ca3af' }} />}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {conv.unread_count > 0 && (
+                                            <span style={{
+                                                backgroundColor: '#ef4444',
+                                                color: 'white',
+                                                fontSize: '10px',
+                                                padding: '2px 6px',
+                                                borderRadius: '10px',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {conv.unread_count}
+                                            </span>
+                                        )}
+                                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                                            {conv.last_message_time ? new Date(conv.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </span>
+                                    </div>
                                 </div>
                                 <p style={{ fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {conv.last_message || 'No messages yet'}
@@ -146,7 +236,14 @@ const InboxPage = () => {
                                         <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '12px', color: '#9ca3af' }}>
+                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
+                                    <button
+                                        onClick={toggleMute}
+                                        title={selectedChat.is_muted ? "Rétablir les sons" : "Mettre en sourdine"}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedChat.is_muted ? '#ef4444' : '#9ca3af', display: 'flex', alignItems: 'center' }}
+                                    >
+                                        {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
+                                    </button>
                                     <Maximize2 size={20} />
                                     <MoreVertical size={20} />
                                 </div>
@@ -204,8 +301,8 @@ const InboxPage = () => {
                         </div>
                     )}
                 </main>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
