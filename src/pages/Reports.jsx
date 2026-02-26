@@ -6,26 +6,45 @@ import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
 import config from '../config';
 
-const MessageChart = ({ data, refreshKey }) => {
-    // Transformer les données pour avoir 30 jours
-    const getLast30Days = () => {
+const MessageChart = ({ data, refreshKey, period }) => {
+    const getDataForPeriod = () => {
         const days = [];
-        for (let i = 29; i >= 0; i--) {
+        const isMonthly = period === '1y' || period === 'all';
+        const count = period === '7d' ? 7 : (period === '30d' ? 30 : (period === '1y' ? 12 : 36));
+
+        for (let i = count - 1; i >= 0; i--) {
             const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dayStr = date.toISOString().split('T')[0];
-            const existing = data.find(d => d.day === dayStr);
-            days.push({
-                day: dayStr,
-                visitorCount: existing ? (existing.visitor_count || 0) : 0,
-                agentCount: existing ? (existing.agent_count || 0) : 0,
-                label: i % 5 === 0 ? date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''
-            });
+            if (isMonthly) {
+                date.setMonth(date.getMonth() - i);
+                const monthStr = date.toISOString().split('-').slice(0, 2).join('-');
+                const existing = data.find(d => d.day === monthStr);
+                days.push({
+                    day: monthStr,
+                    visitorCount: existing ? (existing.visitor_count || 0) : 0,
+                    agentCount: existing ? (existing.agent_count || 0) : 0,
+                    label: i % 3 === 0 ? date.toLocaleDateString('fr-FR', { month: 'short' }) : ''
+                });
+            } else {
+                date.setDate(date.getDate() - i);
+                const dayStr = date.toISOString().split('T')[0];
+                const existing = data.find(d => d.day === dayStr);
+
+                let label = '';
+                if (period === '7d') label = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+                else if (i % 5 === 0) label = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+                days.push({
+                    day: dayStr,
+                    visitorCount: existing ? (existing.visitor_count || 0) : 0,
+                    agentCount: existing ? (existing.agent_count || 0) : 0,
+                    label: label
+                });
+            }
         }
         return days;
     };
 
-    const periodData = getLast30Days();
+    const periodData = getDataForPeriod();
     const maxCount = Math.max(...periodData.map(d => Math.max(d.visitorCount, d.agentCount)), 5);
 
     return (
@@ -37,7 +56,9 @@ const MessageChart = ({ data, refreshKey }) => {
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827' }}>Volume des messages (30 jours)</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827' }}>
+                        Volume des messages ({period === '7d' ? '7 jours' : (period === '30d' ? '30 jours' : (period === '1y' ? '1 an' : 'Tout'))})
+                    </h3>
                     <p style={{ color: '#6b7280', fontSize: '14px' }}>Activité comparative Visiteurs vs Equipe.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -52,42 +73,42 @@ const MessageChart = ({ data, refreshKey }) => {
                 </div>
             </div>
 
-            <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '8px', paddingBottom: '20px' }}>
+            <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: period === '7d' ? '20px' : '4px', paddingBottom: '20px' }}>
                 {periodData.map((item, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%' }}>
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', gap: '2px' }}>
-                            {/* Visitor Bar */}
                             <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: `${(item.visitorCount / maxCount) * 100}%`, opacity: 1 }}
-                                transition={{ type: "spring", stiffness: 100, damping: 15, delay: i * 0.1 }}
+                                transition={{ type: "spring", stiffness: 100, damping: 15, delay: (i / periodData.length) * 0.5 }}
                                 style={{
-                                    width: '12px',
+                                    width: period === '7d' ? '12px' : '100%',
+                                    maxWidth: '12px',
                                     backgroundColor: '#111827',
                                     borderRadius: '4px 4px 2px 2px',
                                     position: 'relative'
                                 }}
                             >
-                                {item.visitorCount > 0 && (
+                                {item.visitorCount > 0 && period === '7d' && (
                                     <div style={{ position: 'absolute', top: '-20px', left: '50%', transform: 'translateX(-50%)', fontSize: '10px', fontWeight: '800', color: '#111827' }}>
                                         {item.visitorCount}
                                     </div>
                                 )}
                             </motion.div>
 
-                            {/* Agent Bar */}
                             <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: `${(item.agentCount / maxCount) * 100}%`, opacity: 1 }}
-                                transition={{ type: "spring", stiffness: 100, damping: 15, delay: i * 0.1 + 0.05 }}
+                                transition={{ type: "spring", stiffness: 100, damping: 15, delay: (i / periodData.length) * 0.5 + 0.05 }}
                                 style={{
-                                    width: '12px',
+                                    width: period === '7d' ? '12px' : '100%',
+                                    maxWidth: '12px',
                                     backgroundColor: '#00b06b',
                                     borderRadius: '4px 4px 2px 2px',
                                     position: 'relative'
                                 }}
                             >
-                                {item.agentCount > 0 && (
+                                {item.agentCount > 0 && period === '7d' && (
                                     <div style={{ position: 'absolute', top: '-20px', left: '50%', transform: 'translateX(-50%)', fontSize: '10px', fontWeight: '800', color: '#00b06b' }}>
                                         {item.agentCount}
                                     </div>
@@ -96,8 +117,8 @@ const MessageChart = ({ data, refreshKey }) => {
                         </div>
                         <span style={{
                             fontSize: '9px',
-                            color: i === 29 ? '#111827' : '#9ca3af',
-                            fontWeight: i === 29 ? '800' : '600',
+                            color: i === periodData.length - 1 ? '#111827' : '#9ca3af',
+                            fontWeight: i === periodData.length - 1 ? '800' : '600',
                             textTransform: 'uppercase',
                             marginTop: '8px',
                             whiteSpace: 'nowrap'
@@ -118,13 +139,14 @@ const Reports = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [period, setPeriod] = useState('30d'); // Default to 30 days
 
-    const fetchStats = async () => {
+    const fetchStats = async (selectedPeriod = period) => {
         setRefreshing(true);
         try {
             const [summaryRes, dailyRes] = await Promise.all([
                 fetch(`${config.API_URL}/api/stats/summary`),
-                fetch(`${config.API_URL}/api/stats/messages-by-day`)
+                fetch(`${config.API_URL}/api/stats/messages-by-day?period=${selectedPeriod}`)
             ]);
 
             const summaryData = await summaryRes.json();
@@ -140,6 +162,11 @@ const Reports = () => {
         } finally {
             setTimeout(() => setRefreshing(false), 600); // Small delay for visual feedback
         }
+    };
+
+    const handlePeriodChange = (newPeriod) => {
+        setPeriod(newPeriod);
+        fetchStats(newPeriod);
     };
 
     useEffect(() => {
@@ -191,37 +218,66 @@ const Reports = () => {
                             <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.02em' }}>Intelligence & Rapports</h1>
                             <p style={{ color: '#6b7280', fontSize: '16px', marginTop: '4px' }}>L'activité de vos clients et de votre équipe.</p>
                         </div>
-                        <button
-                            onClick={fetchStats}
-                            disabled={refreshing}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '12px 24px',
-                                backgroundColor: refreshing ? '#f3f4f6' : 'white',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '14px',
-                                fontWeight: '700',
-                                cursor: refreshing ? 'not-allowed' : 'pointer',
-                                color: '#111827',
-                                transition: 'all 0.2s',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                            }}
-                        >
-                            <motion.div
-                                animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
-                                transition={refreshing ? { repeat: Infinity, duration: 1, ease: "linear" } : { duration: 0.5 }}
-                                style={{ display: 'flex', alignItems: 'center' }}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', backgroundColor: '#e5e7eb', padding: '4px', borderRadius: '12px' }}>
+                                {[
+                                    { id: '7d', label: '7j' },
+                                    { id: '30d', label: '30j' },
+                                    { id: '1y', label: '1 An' },
+                                    { id: 'all', label: 'Tout' }
+                                ].map((p) => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => handlePeriodChange(p.id)}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            backgroundColor: period === p.id ? 'white' : 'transparent',
+                                            color: period === p.id ? '#111827' : '#6b7280',
+                                            fontWeight: '700',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            boxShadow: period === p.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => fetchStats()}
+                                disabled={refreshing}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 24px',
+                                    backgroundColor: refreshing ? '#f3f4f6' : 'white',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '14px',
+                                    fontWeight: '700',
+                                    cursor: refreshing ? 'not-allowed' : 'pointer',
+                                    color: '#111827',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                }}
                             >
-                                <RefreshCcw size={18} />
-                            </motion.div>
-                            {refreshing ? 'Actualisation...' : 'Actualiser'}
-                        </button>
+                                <motion.div
+                                    animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
+                                    transition={refreshing ? { repeat: Infinity, duration: 1, ease: "linear" } : { duration: 0.5 }}
+                                    style={{ display: 'flex', alignItems: 'center' }}
+                                >
+                                    <RefreshCcw size={18} />
+                                </motion.div>
+                                {refreshing ? 'Actualisation...' : 'Actualiser'}
+                            </button>
+                        </div>
                     </header>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-                        {/* Stat Card 1: Online Visitors */}
+                        {/* ... existing cards ... */}
                         <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                                 <div style={{ width: '48px', height: '48px', backgroundColor: '#00b06b15', color: '#00b06b', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -233,7 +289,6 @@ const Reports = () => {
                             <div style={{ fontSize: '38px', fontWeight: '900', color: '#111827' }}>{stats.onlineVisitors}</div>
                         </div>
 
-                        {/* Stat Card 2: Total Clicks */}
                         <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                                 <div style={{ width: '48px', height: '48px', backgroundColor: '#3b82f615', color: '#3b82f6', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -245,7 +300,6 @@ const Reports = () => {
                             <div style={{ fontSize: '38px', fontWeight: '900', color: '#111827' }}>{stats.totalClicks}</div>
                         </div>
 
-                        {/* Stat Card 3: Received Messages Today */}
                         <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                                 <div style={{ width: '48px', height: '48px', backgroundColor: '#6b728015', color: '#111827', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -259,7 +313,6 @@ const Reports = () => {
                             </div>
                         </div>
 
-                        {/* Stat Card 4: Sent Messages Total */}
                         <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                                 <div style={{ width: '48px', height: '48px', backgroundColor: '#00b06b15', color: '#00b06b', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -272,7 +325,7 @@ const Reports = () => {
                         </div>
 
                         <div style={{ gridColumn: 'span 4' }}>
-                            <MessageChart data={dailyMessages} refreshKey={refreshKey} />
+                            <MessageChart data={dailyMessages} refreshKey={refreshKey} period={period} />
                         </div>
                     </div>
                 </main>
