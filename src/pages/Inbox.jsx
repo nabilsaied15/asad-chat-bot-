@@ -12,7 +12,10 @@ import {
     Maximize2,
     Paperclip,
     Smile,
-    Activity
+    Activity,
+    Trash2,
+    RotateCcw,
+    Archive
 } from 'lucide-react';
 
 import { useLanguage } from '../context/LanguageContext';
@@ -28,6 +31,7 @@ const InboxPage = () => {
     const [conversations, setConversations] = useState([]);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
+    const [statusFilter, setStatusFilter] = useState('open'); // 'open' or 'deleted'
     const socketRef = useRef();
 
     useEffect(() => {
@@ -70,7 +74,7 @@ const InboxPage = () => {
         });
 
         return () => socketRef.current.disconnect();
-    }, [navigate, selectedChat]);
+    }, [navigate, selectedChat, statusFilter]);
 
     // Handle Deep Linking from Notifications
     useEffect(() => {
@@ -86,7 +90,7 @@ const InboxPage = () => {
 
     const fetchConversations = async () => {
         try {
-            const res = await fetch(`${config.API_URL}/api/conversations`);
+            const res = await fetch(`${config.API_URL}/api/conversations?status=${statusFilter}`);
             const data = await res.json();
             setConversations(data);
         } catch (err) {
@@ -144,6 +148,46 @@ const InboxPage = () => {
         fetchConversations(); // Update last message
     };
 
+    const deleteConversation = async (id) => {
+        if (!window.confirm("Voulez-vous vraiment supprimer cette conversation et l'envoyer à la corbeille ?")) return;
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'deleted' })
+            });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to delete');
+        }
+    };
+
+    const restoreConversation = async (id) => {
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'open' })
+            });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to restore');
+        }
+    };
+
+    const permanentDelete = async (id) => {
+        if (!window.confirm("ATTENTION : Cette action est irréversible. Toutes les données de la conversation seront perdues.")) return;
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}`, { method: 'DELETE' });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to delete permanently');
+        }
+    };
+
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <DashboardNavbar />
@@ -159,7 +203,8 @@ const InboxPage = () => {
                             <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
                         </>
                     )}
-                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px' }} title="Inbox"><MessageSquare size={24} /></div>
+                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px', marginBottom: '10px' }} title="Inbox"><MessageSquare size={24} /></div>
+                    <div onClick={() => { setStatusFilter(prev => prev === 'deleted' ? 'open' : 'deleted'); setSelectedChat(null); }} style={{ color: 'white', opacity: statusFilter === 'deleted' ? 1 : 0.6, cursor: 'pointer', borderLeft: statusFilter === 'deleted' ? '3px solid #ef4444' : 'none', paddingLeft: statusFilter === 'deleted' ? '11px' : '0', marginLeft: statusFilter === 'deleted' ? '-11px' : '0' }} title="Trash (Corbeille)"><Trash2 size={24} /></div>
                 </nav>
 
                 {/* List Sidebar */}
@@ -197,6 +242,29 @@ const InboxPage = () => {
                                         {conv.is_muted && <BellOff size={12} style={{ color: '#9ca3af' }} />}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {statusFilter === 'open' ? (
+                                            <Trash2
+                                                size={14}
+                                                style={{ color: '#9ca3af', cursor: 'pointer' }}
+                                                onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                                                title="Mettre à la corbeille"
+                                            />
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <RotateCcw
+                                                    size={14}
+                                                    style={{ color: '#00b06b', cursor: 'pointer' }}
+                                                    onClick={(e) => { e.stopPropagation(); restoreConversation(conv.id); }}
+                                                    title="Restaurer"
+                                                />
+                                                <Archive
+                                                    size={14}
+                                                    style={{ color: '#ef4444', cursor: 'pointer' }}
+                                                    onClick={(e) => { e.stopPropagation(); permanentDelete(conv.id); }}
+                                                    title="Supprimer définitivement"
+                                                />
+                                            </div>
+                                        )}
                                         {conv.unread_count > 0 && (
                                             <span style={{
                                                 backgroundColor: '#ef4444',
@@ -221,7 +289,7 @@ const InboxPage = () => {
                         ))}
                         {conversations.length === 0 && (
                             <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-                                No active chats
+                                {statusFilter === 'open' ? 'Aucune conversation active' : 'La corbeille est vide'}
                             </div>
                         )}
                     </div>
@@ -258,6 +326,29 @@ const InboxPage = () => {
                                         >
                                             {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
                                         </button>
+                                        {statusFilter === 'open' ? (
+                                            <Trash2
+                                                size={20}
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => deleteConversation(selectedChat.id)}
+                                                title="Mettre à la corbeille"
+                                            />
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '16px' }}>
+                                                <RotateCcw
+                                                    size={20}
+                                                    style={{ cursor: 'pointer', color: '#00b06b' }}
+                                                    onClick={() => restoreConversation(selectedChat.id)}
+                                                    title="Restaurer"
+                                                />
+                                                <Archive
+                                                    size={20}
+                                                    style={{ cursor: 'pointer', color: '#ef4444' }}
+                                                    onClick={() => permanentDelete(selectedChat.id)}
+                                                    title="Supprimer définitivement"
+                                                />
+                                            </div>
+                                        )}
                                         <Maximize2 size={20} />
                                         <MoreVertical size={20} />
                                     </div>
@@ -297,10 +388,15 @@ const InboxPage = () => {
                                             type="text"
                                             value={inputValue}
                                             onChange={(e) => setInputValue(e.target.value)}
-                                            placeholder={t.inbox.placeholder}
-                                            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none' }}
+                                            placeholder={statusFilter === 'deleted' ? "Inactif (Corbeille)" : t.inbox.placeholder}
+                                            disabled={statusFilter === 'deleted'}
+                                            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', backgroundColor: statusFilter === 'deleted' ? '#f3f4f6' : 'white' }}
                                         />
-                                        <button type="submit" style={{ backgroundColor: '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                        <button
+                                            type="submit"
+                                            disabled={statusFilter === 'deleted'}
+                                            style={{ backgroundColor: statusFilter === 'deleted' ? '#9ca3af' : '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: statusFilter === 'deleted' ? 'not-allowed' : 'pointer' }}
+                                        >
                                             <Send size={20} />
                                         </button>
                                     </form>
