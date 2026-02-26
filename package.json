@@ -1,0 +1,11 @@
+{
+    "name": "asad-chat-bot-root",
+    "private": true,
+    "scripts": {
+        "install": "cd live-chat-landing && npm install",
+        "build": "cd live-chat-landing && npm run build"
+    },
+    "devDependencies": {
+        "vite": "^7.3.1"
+    }
+}
