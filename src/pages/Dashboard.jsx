@@ -18,7 +18,7 @@ const Dashboard = () => {
         ...(user.role === 'admin' ? [
             { title: 'Visitors', desc: 'Real-time monitoring', icon: Users, link: '/monitoring', color: '#10b981' },
             { title: 'Reports', desc: 'View performance', icon: Activity, link: '/reports', color: '#3b82f6' },
-            { title: 'Settings', desc: 'Configure asad.to', icon: Layout, link: '/dashboard', color: '#6366f1' }
+            { title: 'Settings', desc: 'Configure asad.to', icon: Layout, link: '/settings', color: '#6366f1' }
         ] : [])
     ];
 
