@@ -45,7 +45,9 @@ const InboxPage = () => {
         fetchConversations();
 
         // Connect to socket as agent
-        socketRef.current = io(`${config.API_URL}`);
+        socketRef.current = io(`${config.API_URL}`, {
+            transports: ['polling', 'websocket']
+        });
         socketRef.current.emit('register_agent', { agentId: JSON.parse(user).id });
 
         socketRef.current.on('visitor_message', (data) => {
