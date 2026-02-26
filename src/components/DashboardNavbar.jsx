@@ -17,7 +17,7 @@ const DashboardNavbar = () => {
     useEffect(() => {
         const syncUser = async () => {
             try {
-                const res = await fetch(`http://localhost:3000/api/users/${user.id}`);
+                const res = await fetch(`${config.API_URL}/api/users/${user.id}`);
                 if (res.ok) {
                     const data = await res.json();
                     const updated = { ...user, role: data.role };
@@ -45,7 +45,7 @@ const DashboardNavbar = () => {
 
     const fetchNotifications = async () => {
         try {
-            const res = await fetch('http://localhost:3000/api/notifications/unread');
+            const res = await fetch(`${config.API_URL}/api/notifications/unread`);
             const data = await res.json();
             setNotifications(data.latest || []);
             setTotalUnread(data.total || 0);
@@ -64,7 +64,7 @@ const DashboardNavbar = () => {
         setStatus({ type: '', msg: '' });
 
         try {
-            const response = await fetch(`http://localhost:3000/api/users/${user.id}`, {
+            const response = await fetch(`${config.API_URL}/api/users/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email })

@@ -63,7 +63,7 @@ const InboxPage = () => {
 
     const fetchConversations = async () => {
         try {
-            const res = await fetch('http://localhost:3000/api/conversations');
+            const res = await fetch(`${config.API_URL}/api/conversations`);
             const data = await res.json();
             setConversations(data);
         } catch (err) {
@@ -73,7 +73,7 @@ const InboxPage = () => {
 
     const fetchMessages = async (conv) => {
         try {
-            const res = await fetch(`http://localhost:3000/api/conversations/${conv.id}/messages`);
+            const res = await fetch(`${config.API_URL}/api/conversations/${conv.id}/messages`);
             const data = await res.json();
             setMessages(data);
             setSelectedChat(conv);
@@ -87,7 +87,7 @@ const InboxPage = () => {
 
     const markAsRead = async (id) => {
         try {
-            await fetch(`http://localhost:3000/api/conversations/${id}/read`, { method: 'PUT' });
+            await fetch(`${config.API_URL}/api/conversations/${id}/read`, { method: 'PUT' });
             fetchConversations(); // Rafraîchir les compteurs
         } catch (err) {
             console.error('Failed to mark as read');
@@ -97,7 +97,7 @@ const InboxPage = () => {
     const toggleMute = async () => {
         if (!selectedChat) return;
         try {
-            const res = await fetch(`http://localhost:3000/api/conversations/${selectedChat.id}/mute`, { method: 'PUT' });
+            const res = await fetch(`${config.API_URL}/api/conversations/${selectedChat.id}/mute`, { method: 'PUT' });
             const data = await res.json();
             setSelectedChat(prev => ({ ...prev, is_muted: data.is_muted }));
             fetchConversations();
