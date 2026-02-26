@@ -43,6 +43,50 @@ const COLORS = {
     glass: 'rgba(255, 255, 255, 0.7)'
 };
 
+const SectionHeader = ({ title, subtitle }) => (
+    <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '900', color: COLORS.secondary, letterSpacing: '-0.02em', marginBottom: '8px' }}>{title}</h2>
+        <p style={{ color: COLORS.gray, fontSize: '15px' }}>{subtitle}</p>
+    </div>
+);
+
+const InputField = ({ label, value, onChange, type = 'text', placeholder, icon: Icon, desc }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <label style={{ fontSize: '14px', fontWeight: '700', color: COLORS.secondary, marginLeft: '4px' }}>{label}</label>
+        <div style={{ position: 'relative' }}>
+            {Icon && <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: COLORS.gray }} />}
+            <input
+                type={type}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                style={{
+                    width: '100%',
+                    padding: Icon ? '14px 16px 14px 48px' : '14px 16px',
+                    borderRadius: '16px',
+                    border: '1px solid #eef2f6',
+                    backgroundColor: COLORS.lightGray,
+                    outline: 'none',
+                    fontSize: '15px',
+                    transition: 'all 0.2s',
+                    fontWeight: '500'
+                }}
+                onFocus={(e) => {
+                    e.target.style.borderColor = COLORS.primary;
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.boxShadow = `0 0 0 4px ${COLORS.primary}10`;
+                }}
+                onBlur={(e) => {
+                    e.target.style.borderColor = '#eef2f6';
+                    e.target.style.backgroundColor = COLORS.lightGray;
+                    e.target.style.boxShadow = 'none';
+                }}
+            />
+        </div>
+        {desc && <p style={{ fontSize: '12px', color: COLORS.gray, marginLeft: '4px', marginTop: '4px', fontWeight: '500' }}>{desc}</p>}
+    </div>
+);
+
 const Settings = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -186,49 +230,6 @@ const Settings = () => {
         { id: 'security', label: 'Sécurité', icon: Shield, desc: 'Mot de passe et authentification' },
         { id: 'integration', label: 'Intégration', icon: LinkIcon, desc: 'WordPress et API Keys' },
     ];
-
-    const SectionHeader = ({ title, subtitle }) => (
-        <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', color: COLORS.secondary, letterSpacing: '-0.02em', marginBottom: '8px' }}>{title}</h2>
-            <p style={{ color: COLORS.gray, fontSize: '15px' }}>{subtitle}</p>
-        </div>
-    );
-
-    const InputField = ({ label, value, onChange, type = 'text', placeholder, icon: Icon }) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '700', color: COLORS.secondary, marginLeft: '4px' }}>{label}</label>
-            <div style={{ position: 'relative' }}>
-                {Icon && <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: COLORS.gray }} />}
-                <input
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    style={{
-                        width: '100%',
-                        padding: Icon ? '14px 16px 14px 48px' : '14px 16px',
-                        borderRadius: '16px',
-                        border: '1px solid #eef2f6',
-                        backgroundColor: COLORS.lightGray,
-                        outline: 'none',
-                        fontSize: '15px',
-                        transition: 'all 0.2s',
-                        fontWeight: '500'
-                    }}
-                    onFocus={(e) => {
-                        e.target.style.borderColor = COLORS.primary;
-                        e.target.style.backgroundColor = 'white';
-                        e.target.style.boxShadow = `0 0 0 4px ${COLORS.primary}10`;
-                    }}
-                    onBlur={(e) => {
-                        e.target.style.borderColor = '#eef2f6';
-                        e.target.style.backgroundColor = COLORS.lightGray;
-                        e.target.style.boxShadow = 'none';
-                    }}
-                />
-            </div>
-        </div>
-    );
 
     return (
         <div style={{
