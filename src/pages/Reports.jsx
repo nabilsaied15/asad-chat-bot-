@@ -252,11 +252,9 @@ const Reports = () => {
                                 </div>
                                 <Calendar size={18} style={{ color: '#9ca3af' }} />
                             </div>
-                            <h3 style={{ fontSize: '15px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>Messages Reçus</h3>
+                            <h3 style={{ fontSize: '15px', color: '#6b7280', fontWeight: '#600', marginBottom: '8px' }}>Messages Reçus</h3>
                             <div style={{ fontSize: '38px', fontWeight: '900', color: '#111827' }}>
-                                {dailyMessages.length > 0 && dailyMessages[dailyMessages.length - 1].day === new Date().toISOString().split('T')[0]
-                                    ? dailyMessages[dailyMessages.length - 1].visitor_count
-                                    : 0}
+                                {stats.totalVisitorMessages || 0}
                             </div>
                         </div>
 
