@@ -1,25 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import DashboardNavbar from '../components/DashboardNavbar';
-import { useNavigate } from 'react-router-dom';
-import {
-    User,
-    Settings as SettingsIcon,
-    Palette,
-    Bell,
-    Link as LinkIcon,
-    Save,
-    CheckCircle,
-    Monitor,
-    Users,
-    TrendingUp,
-    Shield,
-    MessageSquare,
-    Globe,
-    Zap,
-    Mail,
-    Smartphone
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import config from '../config';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -52,7 +31,7 @@ const Settings = () => {
         setStatus({ type: 'loading', msg: 'Enregistrement...' });
 
         try {
-            const response = await fetch(`http://localhost:3000/api/users/${user.id}`, {
+            const response = await fetch(`${config.API_URL}/api/users/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email })

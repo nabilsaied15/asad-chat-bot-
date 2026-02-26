@@ -1,9 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import DashboardNavbar from '../components/DashboardNavbar';
-import { useNavigate } from 'react-router-dom';
-import { BarChart3, Users, MousePointer2, TrendingUp, Calendar, RefreshCcw, Monitor, Shield, MessageSquare, ArrowUpRight, Send } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import io from 'socket.io-client';
+import config from '../config';
 
 const MessageChart = ({ data, refreshKey }) => {
     // Transformer les données pour avoir exactement 7 jours, même si 0 messages
@@ -121,8 +116,8 @@ const Reports = () => {
         setRefreshing(true);
         try {
             const [summaryRes, dailyRes] = await Promise.all([
-                fetch('http://localhost:3000/api/stats/summary'),
-                fetch('http://localhost:3000/api/stats/messages-by-day')
+                fetch(`${config.API_URL}/api/stats/summary`),
+                fetch(`${config.API_URL}/api/stats/messages-by-day`)
             ]);
 
             const summaryData = await summaryRes.json();
@@ -155,7 +150,7 @@ const Reports = () => {
 
         fetchStats();
 
-        const socket = io('http://localhost:3000');
+        const socket = io(`${config.API_URL}`);
         socket.emit('register_agent', { agentId: user.id });
 
         socket.on('visitor_list', (list) => {

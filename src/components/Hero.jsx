@@ -46,7 +46,7 @@ const Hero = () => {
 
     const handleTrackClick = async () => {
         try {
-            await fetch('http://localhost:3000/api/stats', {
+            await fetch(`${config.API_URL}/api/stats`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ event_type: 'site_click', visitor_id: 'internal_agent' })

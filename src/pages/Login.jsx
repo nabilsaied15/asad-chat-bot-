@@ -1,7 +1,4 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
+import config from '../config';
 
 const Login = () => {
     const { t } = useLanguage();
@@ -14,7 +11,7 @@ const Login = () => {
         e.preventDefault();
         setError('');
         try {
-            const response = await fetch('http://localhost:3000/api/login', {
+            const response = await fetch(`${config.API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
