@@ -3,6 +3,7 @@ import { Users, Shield, Clock, Monitor, MessageCircle, Mail, Plus, Edit, Trash2,
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import DashboardNavbar from '../components/DashboardNavbar';
+import config from '../config';
 
 const PersonnelPage = () => {
     const navigate = useNavigate();
@@ -15,7 +16,7 @@ const PersonnelPage = () => {
     const socketRef = useRef();
 
     const fetchAgents = () => {
-        fetch('http://localhost:3000/api/agents')
+        fetch(`${config.API_URL}/api/agents`)
             .then(res => res.json())
             .then(data => setAllAgents(data))
             .catch(err => console.error("Erreur chargement agents:", err));
@@ -38,7 +39,7 @@ const PersonnelPage = () => {
         fetchAgents();
 
         // Connect to socket as agent
-        socketRef.current = io('http://localhost:3000');
+        socketRef.current = io(`${config.API_URL}`);
 
         socketRef.current.on('agent_list', (list) => {
             const ids = list.map(a => a.agentId);
@@ -57,7 +58,7 @@ const PersonnelPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus({ type: '', msg: '' });
-        const url = editingAgent ? `http://localhost:3000/api/users/${editingAgent.id}` : 'http://localhost:3000/api/users';
+        const url = editingAgent ? `${config.API_URL}/api/users/${editingAgent.id}` : `${config.API_URL}/api/users`;
         const method = editingAgent ? 'PUT' : 'POST';
 
         try {
@@ -87,7 +88,7 @@ const PersonnelPage = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) return;
         try {
-            const res = await fetch(`http://localhost:3000/api/users/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${config.API_URL}/api/users/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchAgents();
             }

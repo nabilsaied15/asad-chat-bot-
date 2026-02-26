@@ -195,6 +195,122 @@
     }
 }
 
+/* Pre-chat Form */
+.nlc-prechat-overlay {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 100;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.nlc-prechat-overlay h4 {
+    margin: 0 0 5px 0;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.nlc-prechat-overlay p {
+    margin: 0 0 10px 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.nlc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nlc-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nlc-field input,
+.nlc-field textarea {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.nlc-field input:focus,
+.nlc-field textarea:focus {
+    border-color: var(--nlc-primary);
+}
+
+.nlc-btn-start {
+    margin-top: 10px;
+    background: var(--nlc-primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nlc-btn-start:hover {
+    background: var(--nlc-primary-dark);
+}
+
+.nlc-choice-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.nlc-btn-choice {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #1e293b;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.nlc-btn-choice:hover {
+    border-color: var(--nlc-primary);
+    color: var(--nlc-primary);
+    background: #f0fdf4;
+}
+
+.nlc-success-msg {
+    text-align: center;
+    padding: 30px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+}
+
+.nlc-success-msg svg {
+    color: var(--nlc-primary);
+    width: 48px;
+    height: 48px;
+    margin-bottom: 5px;
+}
+
 @media (max-width: 480px) {
     .nlc-chat-window {
         width: calc(100vw - 40px);

@@ -12,13 +12,17 @@ import {
     Maximize2,
     Paperclip,
     Smile,
-    Activity
+    Activity,
+    Trash2,
+    RotateCcw,
+    Archive
 } from 'lucide-react';
 
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import DashboardNavbar from '../components/DashboardNavbar';
+import config from '../config';
 
 const InboxPage = () => {
     const { t } = useLanguage();
@@ -27,6 +31,7 @@ const InboxPage = () => {
     const [conversations, setConversations] = useState([]);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
+    const [statusFilter, setStatusFilter] = useState('open'); // 'open' or 'deleted'
     const socketRef = useRef();
 
     useEffect(() => {
@@ -44,7 +49,9 @@ const InboxPage = () => {
         fetchConversations();
 
         // Connect to socket as agent
-        socketRef.current = io('http://localhost:3000');
+        socketRef.current = io(`${config.API_URL}`, {
+            transports: ['polling', 'websocket']
+        });
         socketRef.current.emit('register_agent', { agentId: JSON.parse(user).id });
 
         socketRef.current.on('visitor_message', (data) => {
@@ -67,7 +74,7 @@ const InboxPage = () => {
         });
 
         return () => socketRef.current.disconnect();
-    }, [navigate, selectedChat]);
+    }, [navigate, selectedChat, statusFilter]);
 
     // Handle Deep Linking from Notifications
     useEffect(() => {
@@ -83,7 +90,7 @@ const InboxPage = () => {
 
     const fetchConversations = async () => {
         try {
-            const res = await fetch('http://localhost:3000/api/conversations');
+            const res = await fetch(`${config.API_URL}/api/conversations?status=${statusFilter}`);
             const data = await res.json();
             setConversations(data);
         } catch (err) {
@@ -93,7 +100,7 @@ const InboxPage = () => {
 
     const fetchMessages = async (conv) => {
         try {
-            const res = await fetch(`http://localhost:3000/api/conversations/${conv.id}/messages`);
+            const res = await fetch(`${config.API_URL}/api/conversations/${conv.id}/messages`);
             const data = await res.json();
             setMessages(data);
             setSelectedChat(conv);
@@ -107,7 +114,7 @@ const InboxPage = () => {
 
     const markAsRead = async (id) => {
         try {
-            await fetch(`http://localhost:3000/api/conversations/${id}/read`, { method: 'PUT' });
+            await fetch(`${config.API_URL}/api/conversations/${id}/read`, { method: 'PUT' });
             fetchConversations(); // Rafraîchir les compteurs
         } catch (err) {
             console.error('Failed to mark as read');
@@ -117,7 +124,7 @@ const InboxPage = () => {
     const toggleMute = async () => {
         if (!selectedChat) return;
         try {
-            const res = await fetch(`http://localhost:3000/api/conversations/${selectedChat.id}/mute`, { method: 'PUT' });
+            const res = await fetch(`${config.API_URL}/api/conversations/${selectedChat.id}/mute`, { method: 'PUT' });
             const data = await res.json();
             setSelectedChat(prev => ({ ...prev, is_muted: data.is_muted }));
             fetchConversations();
@@ -141,6 +148,46 @@ const InboxPage = () => {
         fetchConversations(); // Update last message
     };
 
+    const deleteConversation = async (id) => {
+        if (!window.confirm("Voulez-vous vraiment supprimer cette conversation et l'envoyer à la corbeille ?")) return;
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'deleted' })
+            });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to delete');
+        }
+    };
+
+    const restoreConversation = async (id) => {
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'open' })
+            });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to restore');
+        }
+    };
+
+    const permanentDelete = async (id) => {
+        if (!window.confirm("ATTENTION : Cette action est irréversible. Toutes les données de la conversation seront perdues.")) return;
+        try {
+            await fetch(`${config.API_URL}/api/conversations/${id}`, { method: 'DELETE' });
+            setSelectedChat(null);
+            fetchConversations();
+        } catch (err) {
+            console.error('Failed to delete permanently');
+        }
+    };
+
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <DashboardNavbar />
@@ -156,7 +203,8 @@ const InboxPage = () => {
                             <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
                         </>
                     )}
-                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px' }} title="Inbox"><MessageSquare size={24} /></div>
+                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px', marginBottom: '10px' }} title="Inbox"><MessageSquare size={24} /></div>
+                    <div onClick={() => { setStatusFilter(prev => prev === 'deleted' ? 'open' : 'deleted'); setSelectedChat(null); }} style={{ color: 'white', opacity: statusFilter === 'deleted' ? 1 : 0.6, cursor: 'pointer', borderLeft: statusFilter === 'deleted' ? '3px solid #ef4444' : 'none', paddingLeft: statusFilter === 'deleted' ? '11px' : '0', marginLeft: statusFilter === 'deleted' ? '-11px' : '0' }} title="Trash (Corbeille)"><Trash2 size={24} /></div>
                 </nav>
 
                 {/* List Sidebar */}
@@ -188,10 +236,35 @@ const InboxPage = () => {
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>Visitor {conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}</span>
+                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>
+                                            {conv.first_name ? `${conv.first_name} ${conv.last_name || ''}` : `Visitor ${conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}`}
+                                        </span>
                                         {conv.is_muted && <BellOff size={12} style={{ color: '#9ca3af' }} />}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {statusFilter === 'open' ? (
+                                            <Trash2
+                                                size={14}
+                                                style={{ color: '#9ca3af', cursor: 'pointer' }}
+                                                onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                                                title="Mettre à la corbeille"
+                                            />
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <RotateCcw
+                                                    size={14}
+                                                    style={{ color: '#00b06b', cursor: 'pointer' }}
+                                                    onClick={(e) => { e.stopPropagation(); restoreConversation(conv.id); }}
+                                                    title="Restaurer"
+                                                />
+                                                <Archive
+                                                    size={14}
+                                                    style={{ color: '#ef4444', cursor: 'pointer' }}
+                                                    onClick={(e) => { e.stopPropagation(); permanentDelete(conv.id); }}
+                                                    title="Supprimer définitivement"
+                                                />
+                                            </div>
+                                        )}
                                         {conv.unread_count > 0 && (
                                             <span style={{
                                                 backgroundColor: '#ef4444',
@@ -216,81 +289,164 @@ const InboxPage = () => {
                         ))}
                         {conversations.length === 0 && (
                             <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-                                No active chats
+                                {statusFilter === 'open' ? 'Aucune conversation active' : 'La corbeille est vide'}
                             </div>
                         )}
                     </div>
                 </aside>
 
-                {/* Main Chat */}
-                <main style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
+                {/* Main Chat Area (Chat + Details) */}
+                <main style={{ flex: 1, display: 'flex', flexDirection: 'row', backgroundColor: 'white' }}>
                     {selectedChat ? (
                         <>
-                            <header style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '40px', height: '40px', backgroundColor: '#00b06b', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                        V
-                                    </div>
-                                    <div>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Visitor {selectedChat.visitor_id || 'Unknown'}</h3>
-                                        <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
-                                    <button
-                                        onClick={toggleMute}
-                                        title={selectedChat.is_muted ? "Rétablir les sons" : "Mettre en sourdine"}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedChat.is_muted ? '#ef4444' : '#9ca3af', display: 'flex', alignItems: 'center' }}
-                                    >
-                                        {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
-                                    </button>
-                                    <Maximize2 size={20} />
-                                    <MoreVertical size={20} />
-                                </div>
-                            </header>
-
-                            <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {messages.map((msg, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                alignSelf: msg.sender === 'agent' ? 'flex-end' : 'flex-start',
-                                                maxWidth: '70%',
-                                                backgroundColor: msg.sender === 'agent' ? '#00b06b' : 'white',
-                                                color: msg.sender === 'agent' ? 'white' : 'inherit',
-                                                padding: '12px 16px',
-                                                borderRadius: msg.sender === 'agent' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                            }}
-                                        >
-                                            {msg.text}
+                            {/* Central Chat Area */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb' }}>
+                                <header style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', backgroundColor: '#00b06b', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            {selectedChat.first_name ? selectedChat.first_name[0].toUpperCase() : 'V'}
                                         </div>
-                                    ))}
+                                        <div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
+                                                {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : `Visitor ${selectedChat.visitor_id}`}
+                                            </h3>
+                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
+                                                {selectedChat.whatsapp && (
+                                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>📱 {selectedChat.whatsapp}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
+                                        <button
+                                            onClick={toggleMute}
+                                            title={selectedChat.is_muted ? "Rétablir les sons" : "Mettre en sourdine"}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedChat.is_muted ? '#ef4444' : '#9ca3af', display: 'flex', alignItems: 'center' }}
+                                        >
+                                            {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
+                                        </button>
+                                        {statusFilter === 'open' ? (
+                                            <Trash2
+                                                size={20}
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => deleteConversation(selectedChat.id)}
+                                                title="Mettre à la corbeille"
+                                            />
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '16px' }}>
+                                                <RotateCcw
+                                                    size={20}
+                                                    style={{ cursor: 'pointer', color: '#00b06b' }}
+                                                    onClick={() => restoreConversation(selectedChat.id)}
+                                                    title="Restaurer"
+                                                />
+                                                <Archive
+                                                    size={20}
+                                                    style={{ cursor: 'pointer', color: '#ef4444' }}
+                                                    onClick={() => permanentDelete(selectedChat.id)}
+                                                    title="Supprimer définitivement"
+                                                />
+                                            </div>
+                                        )}
+                                        <Maximize2 size={20} />
+                                        <MoreVertical size={20} />
+                                    </div>
+                                </header>
+
+                                <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {messages.map((msg, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    alignSelf: msg.sender === 'agent' ? 'flex-end' : 'flex-start',
+                                                    maxWidth: '70%',
+                                                    backgroundColor: msg.sender === 'agent' ? '#00b06b' : 'white',
+                                                    color: msg.sender === 'agent' ? 'white' : 'inherit',
+                                                    padding: '12px 16px',
+                                                    borderRadius: msg.sender === 'agent' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                }}
+                                            >
+                                                {msg.text}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+
+                                <footer style={{ padding: '20px 24px', borderTop: '1px solid #e5e7eb' }}>
+                                    <form
+                                        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                                        style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}
+                                    >
+                                        <div style={{ display: 'flex', gap: '12px', color: '#9ca3af' }}>
+                                            <Paperclip size={20} />
+                                            <Smile size={20} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={inputValue}
+                                            onChange={(e) => setInputValue(e.target.value)}
+                                            placeholder={statusFilter === 'deleted' ? "Inactif (Corbeille)" : t.inbox.placeholder}
+                                            disabled={statusFilter === 'deleted'}
+                                            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', backgroundColor: statusFilter === 'deleted' ? '#f3f4f6' : 'white' }}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={statusFilter === 'deleted'}
+                                            style={{ backgroundColor: statusFilter === 'deleted' ? '#9ca3af' : '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: statusFilter === 'deleted' ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            <Send size={20} />
+                                        </button>
+                                    </form>
+                                </footer>
                             </div>
 
-                            <footer style={{ padding: '20px 24px', borderTop: '1px solid #e5e7eb' }}>
-                                <form
-                                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                                    style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}
-                                >
-                                    <div style={{ display: 'flex', gap: '12px', color: '#9ca3af' }}>
-                                        <Paperclip size={20} />
-                                        <Smile size={20} />
+                            {/* Visitor Details Panel */}
+                            <aside style={{ width: '280px', backgroundColor: 'white', display: 'flex', flexDirection: 'column', padding: '24px' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                                    <div style={{ width: '64px', height: '64px', backgroundColor: '#f3f4f6', borderRadius: '50%', color: '#00b06b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', margin: '0 auto 12px' }}>
+                                        {selectedChat.first_name ? selectedChat.first_name[0].toUpperCase() : 'V'}
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={inputValue}
-                                        onChange={(e) => setInputValue(e.target.value)}
-                                        placeholder={t.inbox.placeholder}
-                                        style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none' }}
-                                    />
-                                    <button type="submit" style={{ backgroundColor: '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                        <Send size={20} />
-                                    </button>
-                                </form>
-                            </footer>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
+                                        {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : 'Visitor'}
+                                    </h3>
+                                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>ID: {selectedChat.visitor_id}</span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                                        <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>WhatsApp</label>
+                                        <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                                            {selectedChat.whatsapp ? (
+                                                <a href={`https://wa.me/${selectedChat.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#00b06b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    📱 {selectedChat.whatsapp}
+                                                </a>
+                                            ) : (
+                                                <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                                        <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Demande initiale</label>
+                                        <div style={{ fontSize: '14px', lineHeight: '1.5', color: '#374151', backgroundColor: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+                                            {selectedChat.problem ? selectedChat.problem : <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Aucune description fournie</span>}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ mt: 'auto', paddingTop: '20px' }}>
+                                        <button
+                                            onClick={() => window.open(`https://wa.me/${selectedChat.whatsapp?.replace(/[^0-9]/g, '')}`, '_blank')}
+                                            disabled={!selectedChat.whatsapp}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #00b06b', color: '#00b06b', backgroundColor: 'transparent', fontWeight: '600', cursor: selectedChat.whatsapp ? 'pointer' : 'not-allowed', opacity: selectedChat.whatsapp ? 1 : 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                        >
+                                            Ouvrir sur WhatsApp
+                                        </button>
+                                    </div>
+                                </div>
+                            </aside>
                         </>
                     ) : (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#9ca3af' }}>

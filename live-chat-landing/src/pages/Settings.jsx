@@ -20,6 +20,7 @@ import {
     Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import config from '../config';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -52,7 +53,7 @@ const Settings = () => {
         setStatus({ type: 'loading', msg: 'Enregistrement...' });
 
         try {
-            const response = await fetch(`http://localhost:3000/api/users/${user.id}`, {
+            const response = await fetch(`${config.API_URL}/api/users/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email })

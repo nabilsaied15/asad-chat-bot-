@@ -74,10 +74,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const statusEl = document.getElementById('nlc-status');
     const dot = container.querySelector('.nlc-notification-dot');
 
+    function trackEvent(type) {
+        fetch(`${serverUrl}/api/stats`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_type: type, visitor_id: visitorId })
+        }).catch(e => console.error("[asad.to] Track error:", e));
+    }
+
     bubble.onclick = () => {
+        trackEvent('site_click');
         win.classList.toggle('nlc-window-open');
         dot.style.display = 'none';
         if (win.classList.contains('nlc-window-open')) {
+            if (!socket) checkPreChat();
             setTimeout(() => input.focus(), 100);
         }
     };
@@ -85,10 +95,117 @@ document.addEventListener("DOMContentLoaded", function () {
     const visitorId = localStorage.getItem('nlc_vid') || 'vis_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('nlc_vid', visitorId);
 
+    // Pre-chat form logic
+    function checkPreChat() {
+        const userInfo = localStorage.getItem('nlc_user_info');
+        if (!userInfo) {
+            showPreChatForm();
+        } else {
+            initSocket(JSON.parse(userInfo));
+        }
+    }
+
+    function showPreChatForm() {
+        statusEl.textContent = "";
+
+        const overlay = document.createElement('div');
+        overlay.className = 'nlc-prechat-overlay';
+        overlay.id = 'nlc-prechat';
+        overlay.innerHTML = `
+            <h4>${lang === 'fr' ? 'Bienvenue !' : 'Welcome!'}</h4>
+            <p>${lang === 'fr' ? 'Avez-vous WhatsApp ?' : 'Do you have WhatsApp?'}</p>
+            <div class="nlc-choice-group">
+                <button class="nlc-btn-choice" id="nlc-choice-yes">${lang === 'fr' ? 'Oui' : 'Yes'}</button>
+                <button class="nlc-btn-choice" id="nlc-choice-no">${lang === 'fr' ? 'Non' : 'No'}</button>
+            </div>
+        `;
+        win.appendChild(overlay);
+
+        document.getElementById('nlc-choice-yes').onclick = () => showFullForm(overlay);
+        document.getElementById('nlc-choice-no').onclick = () => showPhoneOnlyForm(overlay);
+    }
+
+    function showFullForm(overlay) {
+        overlay.innerHTML = `
+            <h4>${lang === 'fr' ? 'Super !' : 'Great!'}</h4>
+            <p>${lang === 'fr' ? 'Merci de remplir ce formulaire pour commencer.' : 'Please fill this form to start.'}</p>
+            
+            <div class="nlc-field">
+                <label>${lang === 'fr' ? 'Prénom' : 'First Name'}</label>
+                <input type="text" id="p-fname" placeholder="Ex: Jean" required>
+            </div>
+            <div class="nlc-field">
+                <label>${lang === 'fr' ? 'Nom' : 'Last Name'}</label>
+                <input type="text" id="p-lname" placeholder="Ex: Dupont" required>
+            </div>
+            <div class="nlc-field">
+                <label>${lang === 'fr' ? 'WhatsApp' : 'WhatsApp Number'}</label>
+                <input type="text" id="p-wa" placeholder="Ex: +33..." required>
+            </div>
+            <div class="nlc-field">
+                <label>${lang === 'fr' ? 'Que pouvons-nous faire pour vous ?' : 'How can we help you?'}</label>
+                <textarea id="p-req" rows="2" placeholder="..."></textarea>
+            </div>
+            <button class="nlc-btn-start" id="nlc-start-chat">${lang === 'fr' ? 'Démarrer la discussion' : 'Start Chat'}</button>
+        `;
+
+        document.getElementById('nlc-start-chat').onclick = () => {
+            const fname = document.getElementById('p-fname').value.trim();
+            const lname = document.getElementById('p-lname').value.trim();
+            const wa = document.getElementById('p-wa').value.trim();
+            const req = document.getElementById('p-req').value.trim();
+
+            if (!fname || !lname || !wa) return alert(lang === 'fr' ? "Merci de remplir les champs obligatoires." : "Please fill required fields.");
+
+            const info = { firstName: fname, lastName: lname, whatsapp: wa, problem: req };
+            localStorage.setItem('nlc_user_info', JSON.stringify(info));
+            overlay.remove();
+            initSocket(info);
+
+            if (req) {
+                setTimeout(() => {
+                    input.value = req;
+                    sendM();
+                }, 500);
+            }
+        };
+    }
+
+    function showPhoneOnlyForm(overlay) {
+        overlay.innerHTML = `
+            <h4>${lang === 'fr' ? 'Pas de souci' : 'No problem'}</h4>
+            <p>${lang === 'fr' ? 'Laissez votre numéro et on vous rappelle.' : 'Leave your number and we will call you back.'}</p>
+            
+            <div class="nlc-field">
+                <label>${lang === 'fr' ? 'Numéro de téléphone' : 'Phone Number'}</label>
+                <input type="text" id="p-phone" placeholder="Ex: 06..." required>
+            </div>
+            <button class="nlc-btn-start" id="nlc-submit-phone">${lang === 'fr' ? 'Envoyer' : 'Send'}</button>
+        `;
+
+        document.getElementById('nlc-submit-phone').onclick = () => {
+            const phone = document.getElementById('p-phone').value.trim();
+            if (!phone) return alert(lang === 'fr' ? "Merci de saisir votre numéro." : "Please enter your number.");
+
+            const info = { firstName: "Visitor", lastName: "(No WA)", whatsapp: phone, problem: "Callback Request (No WhatsApp)" };
+            initSocket(info);
+
+            overlay.innerHTML = `
+                <div class="nlc-success-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <p style="font-weight:700; font-size:16px">${lang === 'fr' ? 'Merci !' : 'Thank you!'}</p>
+                    <p>${lang === 'fr' ? 'On va vous appeler dans le bref délai.' : 'We will call you back shortly.'}</p>
+                    <button class="nlc-btn-start" style="width:100%" id="nlc-close-prechat">${lang === 'fr' ? 'Fermer' : 'Close'}</button>
+                </div>
+            `;
+            document.getElementById('nlc-close-prechat').onclick = () => overlay.remove();
+        };
+    }
+
     // Socket Initialization logic
     let socket;
 
-    function initSocket() {
+    function initSocket(userInfo = null) {
         if (typeof io === 'undefined') {
             console.error("[asad.to] 'io' is undefined. Socket.io library failed to load.");
             statusEl.textContent = trans.statusOffline;
@@ -96,18 +213,27 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        if (socket) return; // Already init
+
         try {
             socket = io(serverUrl, {
                 reconnectionAttempts: 10,
                 timeout: 10000,
-                transports: ['polling', 'websocket'] // Prefer polling for Vercel stability
+                transports: ['polling', 'websocket']
             });
 
             socket.on('connect', () => {
                 console.log("[asad.to] Connected! VID:", visitorId);
                 statusEl.textContent = trans.statusOnline;
                 statusEl.style.color = "#10b981";
-                socket.emit('register_visitor', { visitorId, url: window.location.href, title: document.title });
+
+                const regData = {
+                    visitorId,
+                    url: window.location.href,
+                    title: document.title,
+                    ...userInfo
+                };
+                socket.emit('register_visitor', regData);
             });
 
             socket.on('disconnect', () => {
@@ -132,24 +258,24 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Attempt to init immediately, or wait a bit if io is not ready
-    if (typeof io !== 'undefined') {
-        initSocket();
-    } else {
-        console.log("[asad.to] Waiting for Socket.io library...");
-        let attempts = 0;
-        const interval = setInterval(() => {
-            attempts++;
-            if (typeof io !== 'undefined') {
-                clearInterval(interval);
-                initSocket();
-            } else if (attempts > 50) {
-                clearInterval(interval);
-                console.error("[asad.to] Socket.io failed to load after 5 seconds.");
-                statusEl.textContent = trans.statusOffline;
-            }
-        }, 100);
-    }
+    // Track first click on site for conversion stats
+    let hasTrackedClick = false;
+    document.addEventListener('mousedown', () => {
+        if (!hasTrackedClick) {
+            trackEvent('site_click');
+            hasTrackedClick = true;
+        }
+    });
+
+    // Replace the bubble click logic to trigger pre-chat
+    bubble.onclick = () => {
+        win.classList.toggle('nlc-window-open');
+        dot.style.display = 'none';
+        if (win.classList.contains('nlc-window-open')) {
+            if (!socket) checkPreChat();
+            setTimeout(() => input.focus(), 100);
+        }
+    };
 
     function addMsg(text, sender) {
         const d = document.createElement('div');

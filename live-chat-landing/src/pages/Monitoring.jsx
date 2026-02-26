@@ -3,6 +3,7 @@ import { Users, Globe, Clock, Monitor, MessageCircle, ExternalLink, Shield, Acti
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import DashboardNavbar from '../components/DashboardNavbar';
+import config from '../config';
 
 const MonitoringPage = () => {
     const navigate = useNavigate();
@@ -23,7 +24,7 @@ const MonitoringPage = () => {
         }
 
         // Connect to socket as agent to get the visitor list
-        socketRef.current = io('http://localhost:3000');
+        socketRef.current = io(`${config.API_URL}`);
         socketRef.current.emit('register_agent', { agentId: userData.id });
 
         socketRef.current.on('visitor_list', (list) => {

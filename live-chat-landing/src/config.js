@@ -3,8 +3,10 @@
 // For remote access or production, change this to your public IP or Domain
 
 const config = {
-    // API_URL: 'http://localhost:3000', // Local only
-    API_URL: 'http://' + window.location.hostname + ':3000', // Auto-detects IP if accessed via IP
+    // Si nous sommes sur un domaine de production (pas localhost), on utilise l'URL du backend distant
+    API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000'
+        : 'https://asad-chat-server.onrender.com',
 };
 
 export default config;
