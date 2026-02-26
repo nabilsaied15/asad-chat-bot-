@@ -319,18 +319,15 @@ const Reports = () => {
     }, [navigate]);
 
     const formatTime = (seconds) => {
-        if (!seconds || seconds <= 0) return '---';
+        if (!seconds) return '--';
         if (seconds < 60) return `${seconds}s`;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return secs > 0 ? `${mins}m ${secs}s` : `${mins} min`;
+        const mins = Math.round(seconds / 60);
+        return `${mins} min`;
     };
 
     const conversionRate = useMemo(() => {
-        if (!stats.totalConversations || !stats.totalClicks) return 0;
-        // Standard formula: (Convs / Clicks) * 100
-        const rate = (stats.totalConversations / stats.totalClicks) * 100;
-        return Math.min(rate, 100).toFixed(1);
+        if (!stats.totalClicks) return 0;
+        return ((stats.totalConversations / stats.totalClicks) * 100).toFixed(1);
     }, [stats]);
 
     return (
