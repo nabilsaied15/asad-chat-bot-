@@ -6,7 +6,7 @@ const config = {
     // Si nous sommes sur un domaine de production (pas localhost), on utilise l'URL du backend distant
     API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:3000'
-        : 'https://chatt-bot-serveur.vercel.app',
+        : 'https://chatt-bot-serveur-1rrl.vercel.app',
 };
 
 export default config;
