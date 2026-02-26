@@ -1,3 +1,8 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Globe, Clock, Monitor, MessageCircle, ExternalLink, Shield, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+import DashboardNavbar from '../components/DashboardNavbar';
 import config from '../config';
 
 const MonitoringPage = () => {

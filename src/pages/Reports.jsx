@@ -1,3 +1,9 @@
+import React, { useState, useEffect } from 'react';
+import DashboardNavbar from '../components/DashboardNavbar';
+import { useNavigate } from 'react-router-dom';
+import { BarChart3, Users, MousePointer2, TrendingUp, Calendar, RefreshCcw, Monitor, Shield, MessageSquare, ArrowUpRight, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import io from 'socket.io-client';
 import config from '../config';
 
 const MessageChart = ({ data, refreshKey }) => {

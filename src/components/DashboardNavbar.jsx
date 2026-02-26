@@ -1,3 +1,7 @@
+import React, { useState, useEffect } from 'react';
+import { LogOut, User, Bell, ChevronDown, X, Mail, Save, MessageSquare, Settings } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import config from '../config';
 
 const DashboardNavbar = () => {

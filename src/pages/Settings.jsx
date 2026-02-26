@@ -1,3 +1,25 @@
+import React, { useState, useEffect } from 'react';
+import DashboardNavbar from '../components/DashboardNavbar';
+import { useNavigate } from 'react-router-dom';
+import {
+    User,
+    Settings as SettingsIcon,
+    Palette,
+    Bell,
+    Link as LinkIcon,
+    Save,
+    CheckCircle,
+    Monitor,
+    Users,
+    TrendingUp,
+    Shield,
+    MessageSquare,
+    Globe,
+    Zap,
+    Mail,
+    Smartphone
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import config from '../config';
 
 const Settings = () => {

@@ -1,3 +1,24 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    MessageSquare,
+    Search,
+    MoreVertical,
+    Send,
+    Bell,
+    BellOff,
+    Monitor,
+    Users,
+    Shield,
+    Maximize2,
+    Paperclip,
+    Smile,
+    Activity
+} from 'lucide-react';
+
+import { useLanguage } from '../context/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+import DashboardNavbar from '../components/DashboardNavbar';
 import config from '../config';
 
 const InboxPage = () => {
