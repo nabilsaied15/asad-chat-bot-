@@ -191,7 +191,9 @@ const InboxPage = () => {
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>Visitor {conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}</span>
+                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>
+                                            {conv.first_name ? `${conv.first_name} ${conv.last_name || ''}` : `Visitor ${conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}`}
+                                        </span>
                                         {conv.is_muted && <BellOff size={12} style={{ color: '#9ca3af' }} />}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -232,11 +234,18 @@ const InboxPage = () => {
                             <header style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{ width: '40px', height: '40px', backgroundColor: '#00b06b', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                        V
+                                        {selectedChat.first_name ? selectedChat.first_name[0].toUpperCase() : 'V'}
                                     </div>
                                     <div>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Visitor {selectedChat.visitor_id || 'Unknown'}</h3>
-                                        <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
+                                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
+                                            {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : `Visitor ${selectedChat.visitor_id}`}
+                                        </h3>
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
+                                            {selectedChat.whatsapp && (
+                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>📱 {selectedChat.whatsapp}</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
