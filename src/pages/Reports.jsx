@@ -7,10 +7,10 @@ import io from 'socket.io-client';
 import config from '../config';
 
 const MessageChart = ({ data, refreshKey }) => {
-    // Transformer les données pour avoir exactement 7 jours, même si 0 messages
-    const getLast7Days = () => {
+    // Transformer les données pour avoir 30 jours
+    const getLast30Days = () => {
         const days = [];
-        for (let i = 6; i >= 0; i--) {
+        for (let i = 29; i >= 0; i--) {
             const date = new Date();
             date.setDate(date.getDate() - i);
             const dayStr = date.toISOString().split('T')[0];
@@ -19,14 +19,14 @@ const MessageChart = ({ data, refreshKey }) => {
                 day: dayStr,
                 visitorCount: existing ? (existing.visitor_count || 0) : 0,
                 agentCount: existing ? (existing.agent_count || 0) : 0,
-                label: date.toLocaleDateString('fr-FR', { weekday: 'short' })
+                label: i % 5 === 0 ? date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''
             });
         }
         return days;
     };
 
-    const weekData = getLast7Days();
-    const maxCount = Math.max(...weekData.map(d => Math.max(d.visitorCount, d.agentCount)), 5);
+    const periodData = getLast30Days();
+    const maxCount = Math.max(...periodData.map(d => Math.max(d.visitorCount, d.agentCount)), 5);
 
     return (
         <motion.div
@@ -37,7 +37,7 @@ const MessageChart = ({ data, refreshKey }) => {
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827' }}>Volume des messages (7 jours)</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827' }}>Volume des messages (30 jours)</h3>
                     <p style={{ color: '#6b7280', fontSize: '14px' }}>Activité comparative Visiteurs vs Equipe.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -52,10 +52,10 @@ const MessageChart = ({ data, refreshKey }) => {
                 </div>
             </div>
 
-            <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', paddingBottom: '20px' }}>
-                {weekData.map((item, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', gap: '4px' }}>
+            <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '8px', paddingBottom: '20px' }}>
+                {periodData.map((item, i) => (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', gap: '2px' }}>
                             {/* Visitor Bar */}
                             <motion.div
                                 initial={{ height: 0, opacity: 0 }}
@@ -95,11 +95,12 @@ const MessageChart = ({ data, refreshKey }) => {
                             </motion.div>
                         </div>
                         <span style={{
-                            fontSize: '11px',
-                            color: i === 6 ? '#111827' : '#9ca3af',
-                            fontWeight: i === 6 ? '800' : '600',
+                            fontSize: '9px',
+                            color: i === 29 ? '#111827' : '#9ca3af',
+                            fontWeight: i === 29 ? '800' : '600',
                             textTransform: 'uppercase',
-                            marginTop: '8px'
+                            marginTop: '8px',
+                            whiteSpace: 'nowrap'
                         }}>
                             {item.label}
                         </span>
@@ -112,7 +113,7 @@ const MessageChart = ({ data, refreshKey }) => {
 
 const Reports = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState({ totalClicks: 0, onlineVisitors: 0, totalAgentMessages: 0 });
+    const [stats, setStats] = useState({ totalClicks: 0, onlineVisitors: 0, totalAgentMessages: 0, totalVisitorMessages: 0 });
     const [dailyMessages, setDailyMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -252,7 +253,7 @@ const Reports = () => {
                                 </div>
                                 <Calendar size={18} style={{ color: '#9ca3af' }} />
                             </div>
-                            <h3 style={{ fontSize: '15px', color: '#6b7280', fontWeight: '#600', marginBottom: '8px' }}>Messages Reçus</h3>
+                            <h3 style={{ fontSize: '15px', color: '#6b7280', fontWeight: 600, marginBottom: '8px' }}>Messages Reçus</h3>
                             <div style={{ fontSize: '38px', fontWeight: '900', color: '#111827' }}>
                                 {stats.totalVisitorMessages || 0}
                             </div>
