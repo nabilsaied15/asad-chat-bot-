@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Configuration
     const primaryColor = (typeof nlc_config !== 'undefined' && nlc_config.primary_color) || '#00b06b';
-    const serverUrl = (typeof nlc_config !== 'undefined' && nlc_config.server_url) || 'http://localhost:3000';
+    const serverUrl = (typeof nlc_config !== 'undefined' && nlc_config.server_url) || 'https://asad-chat-server.onrender.com';
 
     console.log("[asad.to] Widget Init. Server:", serverUrl);
 
@@ -99,8 +99,8 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             socket = io(serverUrl, {
                 reconnectionAttempts: 10,
-                timeout: 5000,
-                transports: ['websocket', 'polling']
+                timeout: 10000,
+                transports: ['polling', 'websocket'] // Prefer polling for Vercel stability
             });
 
             socket.on('connect', () => {

@@ -19,6 +19,6 @@ require_once NLC_PLUGIN_DIR . 'frontend/widget-injector.php';
 
 register_activation_hook( __FILE__, 'nlc_activate' );
 function nlc_activate() {
-    add_option( 'nlc_server_url', 'http://localhost:3000' );
+    add_option( 'nlc_server_url', 'https://asad-chat-server.onrender.com' );
     add_option( 'nlc_primary_color', '#6366f1' );
 }
