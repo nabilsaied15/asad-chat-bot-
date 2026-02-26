@@ -227,82 +227,130 @@ const InboxPage = () => {
                     </div>
                 </aside>
 
-                {/* Main Chat */}
-                <main style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
+                {/* Main Chat Area (Chat + Details) */}
+                <main style={{ flex: 1, display: 'flex', flexDirection: 'row', backgroundColor: 'white' }}>
                     {selectedChat ? (
                         <>
-                            <header style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '40px', height: '40px', backgroundColor: '#00b06b', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                            {/* Central Chat Area */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb' }}>
+                                <header style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '40px', height: '40px', backgroundColor: '#00b06b', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            {selectedChat.first_name ? selectedChat.first_name[0].toUpperCase() : 'V'}
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
+                                                {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : `Visitor ${selectedChat.visitor_id}`}
+                                            </h3>
+                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
+                                                {selectedChat.whatsapp && (
+                                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>📱 {selectedChat.whatsapp}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
+                                        <button
+                                            onClick={toggleMute}
+                                            title={selectedChat.is_muted ? "Rétablir les sons" : "Mettre en sourdine"}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedChat.is_muted ? '#ef4444' : '#9ca3af', display: 'flex', alignItems: 'center' }}
+                                        >
+                                            {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
+                                        </button>
+                                        <Maximize2 size={20} />
+                                        <MoreVertical size={20} />
+                                    </div>
+                                </header>
+
+                                <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {messages.map((msg, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    alignSelf: msg.sender === 'agent' ? 'flex-end' : 'flex-start',
+                                                    maxWidth: '70%',
+                                                    backgroundColor: msg.sender === 'agent' ? '#00b06b' : 'white',
+                                                    color: msg.sender === 'agent' ? 'white' : 'inherit',
+                                                    padding: '12px 16px',
+                                                    borderRadius: msg.sender === 'agent' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                }}
+                                            >
+                                                {msg.text}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <footer style={{ padding: '20px 24px', borderTop: '1px solid #e5e7eb' }}>
+                                    <form
+                                        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                                        style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}
+                                    >
+                                        <div style={{ display: 'flex', gap: '12px', color: '#9ca3af' }}>
+                                            <Paperclip size={20} />
+                                            <Smile size={20} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={inputValue}
+                                            onChange={(e) => setInputValue(e.target.value)}
+                                            placeholder={t.inbox.placeholder}
+                                            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none' }}
+                                        />
+                                        <button type="submit" style={{ backgroundColor: '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                            <Send size={20} />
+                                        </button>
+                                    </form>
+                                </footer>
+                            </div>
+
+                            {/* Visitor Details Panel */}
+                            <aside style={{ width: '280px', backgroundColor: 'white', display: 'flex', flexDirection: 'column', padding: '24px' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                                    <div style={{ width: '64px', height: '64px', backgroundColor: '#f3f4f6', borderRadius: '50%', color: '#00b06b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', margin: '0 auto 12px' }}>
                                         {selectedChat.first_name ? selectedChat.first_name[0].toUpperCase() : 'V'}
                                     </div>
-                                    <div>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
-                                            {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : `Visitor ${selectedChat.visitor_id}`}
-                                        </h3>
-                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
-                                            {selectedChat.whatsapp && (
-                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>📱 {selectedChat.whatsapp}</span>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
+                                        {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : 'Visitor'}
+                                    </h3>
+                                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>ID: {selectedChat.visitor_id}</span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                                        <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>WhatsApp</label>
+                                        <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                                            {selectedChat.whatsapp ? (
+                                                <a href={`https://wa.me/${selectedChat.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: '#00b06b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    📱 {selectedChat.whatsapp}
+                                                </a>
+                                            ) : (
+                                                <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</span>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: '#9ca3af' }}>
-                                    <button
-                                        onClick={toggleMute}
-                                        title={selectedChat.is_muted ? "Rétablir les sons" : "Mettre en sourdine"}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedChat.is_muted ? '#ef4444' : '#9ca3af', display: 'flex', alignItems: 'center' }}
-                                    >
-                                        {selectedChat.is_muted ? <BellOff size={20} /> : <Bell size={20} />}
-                                    </button>
-                                    <Maximize2 size={20} />
-                                    <MoreVertical size={20} />
-                                </div>
-                            </header>
 
-                            <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {messages.map((msg, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                alignSelf: msg.sender === 'agent' ? 'flex-end' : 'flex-start',
-                                                maxWidth: '70%',
-                                                backgroundColor: msg.sender === 'agent' ? '#00b06b' : 'white',
-                                                color: msg.sender === 'agent' ? 'white' : 'inherit',
-                                                padding: '12px 16px',
-                                                borderRadius: msg.sender === 'agent' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                            }}
-                                        >
-                                            {msg.text}
+                                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                                        <label style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Demande initiale</label>
+                                        <div style={{ fontSize: '14px', lineHeight: '1.5', color: '#374151', backgroundColor: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+                                            {selectedChat.problem ? selectedChat.problem : <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Aucune description fournie</span>}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <footer style={{ padding: '20px 24px', borderTop: '1px solid #e5e7eb' }}>
-                                <form
-                                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                                    style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '12px' }}
-                                >
-                                    <div style={{ display: 'flex', gap: '12px', color: '#9ca3af' }}>
-                                        <Paperclip size={20} />
-                                        <Smile size={20} />
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={inputValue}
-                                        onChange={(e) => setInputValue(e.target.value)}
-                                        placeholder={t.inbox.placeholder}
-                                        style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none' }}
-                                    />
-                                    <button type="submit" style={{ backgroundColor: '#00b06b', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                        <Send size={20} />
-                                    </button>
-                                </form>
-                            </footer>
+
+                                    <div style={{ mt: 'auto', paddingTop: '20px' }}>
+                                        <button
+                                            onClick={() => window.open(`https://wa.me/${selectedChat.whatsapp?.replace(/[^0-9]/g, '')}`, '_blank')}
+                                            disabled={!selectedChat.whatsapp}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #00b06b', color: '#00b06b', backgroundColor: 'transparent', fontWeight: '600', cursor: selectedChat.whatsapp ? 'pointer' : 'not-allowed', opacity: selectedChat.whatsapp ? 1 : 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                        >
+                                            Ouvrir sur WhatsApp
+                                        </button>
+                                    </div>
+                                </div>
+                            </aside>
                         </>
                     ) : (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#9ca3af' }}>
