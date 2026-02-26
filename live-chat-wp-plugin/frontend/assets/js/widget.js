@@ -3,10 +3,36 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!container) return;
 
     // Configuration
-    const primaryColor = (typeof nlc_config !== 'undefined' && nlc_config.primary_color) || '#00b06b';
+    let primaryColor = (typeof nlc_config !== 'undefined' && nlc_config.primary_color) || '#00b06b';
     const serverUrl = (typeof nlc_config !== 'undefined' && nlc_config.server_url) || 'https://asad-chat-server.onrender.com';
+    const siteKey = (typeof nlc_config !== 'undefined' && nlc_config.site_key) || '';
+    let welcomeMsg = "";
 
-    console.log("[asad.to] Widget Init. Server:", serverUrl);
+    console.log("[asad.to] Widget Init. Server:", serverUrl, "Key:", siteKey);
+
+    // Fetch dynamic settings if key exists
+    async function loadDynamicSettings() {
+        if (!siteKey) return;
+        try {
+            const res = await fetch(`${serverUrl}/api/public/settings/${siteKey}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.primary_color) {
+                    primaryColor = data.primary_color;
+                    container.style.setProperty('--nlc-primary', primaryColor);
+                }
+                if (data.welcome_message) {
+                    welcomeMsg = data.welcome_message;
+                    // Update the welcome message in the chat if it's currently the default
+                    const firstMsg = document.querySelector('.nlc-message-agent');
+                    if (firstMsg && (firstMsg.textContent === trans.fr.welcome || firstMsg.textContent === trans.en.welcome)) {
+                        firstMsg.textContent = welcomeMsg;
+                    }
+                }
+            }
+        } catch (e) { console.error("[asad.to] Settings fetch error:", e); }
+    }
+    loadDynamicSettings();
 
     // Translations
     const lang = document.documentElement.lang.startsWith('en') ? 'en' : 'fr';
@@ -229,6 +255,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const regData = {
                     visitorId,
+                    siteKey,
                     url: window.location.href,
                     title: document.title,
                     ...userInfo

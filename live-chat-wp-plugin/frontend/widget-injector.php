@@ -30,7 +30,8 @@ add_action( 'admin_footer', 'nlc_footer' );
 function nlc_footer() {
     $url = get_option( 'nlc_server_url', 'http://localhost:3000' );
     $color = get_option( 'nlc_primary_color', '#00b06b' );
+    $site_key = get_option( 'nlc_site_key', '' );
     
-    echo '<script>var nlc_config = { server_url: "' . esc_js( $url ) . '", primary_color: "' . esc_js( $color ) . '" };</script>';
+    echo '<script>var nlc_config = { server_url: "' . esc_js( $url ) . '", primary_color: "' . esc_js( $color ) . '", site_key: "' . esc_js( $site_key ) . '" };</script>';
     echo '<div id="nlc-widget-container"></div>';
 }

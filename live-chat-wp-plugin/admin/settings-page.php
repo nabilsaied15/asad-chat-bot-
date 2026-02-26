@@ -10,6 +10,7 @@ add_action( 'admin_init', 'nlc_init' );
 function nlc_init() {
     register_setting( 'nlc_group', 'nlc_server_url' );
     register_setting( 'nlc_group', 'nlc_primary_color' );
+    register_setting( 'nlc_group', 'nlc_site_key' );
 }
 
 function nlc_settings_html() {
@@ -29,11 +30,15 @@ function nlc_settings_html() {
             <h1 class="nlc-h1"><span class="dashicons dashicons-format-chat nlc-icon"></span> Nabil Live Chat</h1>
             <div class="nlc-box">
                 <h2>Configuration rapide</h2>
-                <p>1. Lancez votre serveur Node.js.<br>2. Entrez l'URL ci-dessous.<br>3. Enregistrez pour voir le chat sur votre site.</p>
+                <p>1. Connectez-vous à votre <a href="https://asad-chat-bot.vercel.app/settings" target="_blank">Dashboard asad.to</a>.<br>2. Copiez votre <strong>Site Key</strong> dans l'onglet Intégration.<br>3. Collez-la ci-dessous et enregistrez.</p>
             </div>
             <form action="options.php" method="post">
                 <?php settings_fields( 'nlc_group' ); ?>
                 <table class="form-table">
+                    <tr>
+                        <th scope="row">Site Key</th>
+                        <td><input type="text" name="nlc_site_key" value="<?php echo esc_attr( get_option('nlc_site_key') ); ?>" class="regular-text" placeholder="asad_key_..._live" required /></td>
+                    </tr>
                     <tr>
                         <th scope="row">URL WebSocket</th>
                         <td><input type="url" name="nlc_server_url" value="<?php echo esc_attr( get_option('nlc_server_url') ); ?>" class="regular-text" required /></td>

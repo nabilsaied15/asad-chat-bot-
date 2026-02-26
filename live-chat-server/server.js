@@ -197,6 +197,10 @@ async function connectDB() {
                     await db.execute('ALTER TABLE conversations ADD COLUMN problem TEXT');
                     console.log('Migration: Colonne problem ajoutée à conversations');
                 }
+                if (!columnNames.includes('agent_id')) {
+                    await db.execute('ALTER TABLE conversations ADD COLUMN agent_id INT');
+                    console.log('Migration: Colonne agent_id ajoutée à conversations');
+                }
             } catch (colErr) {
                 console.error('Erreur vérification colonnes:', colErr.message);
             }
@@ -232,6 +236,19 @@ async function connectDB() {
                 await db.execute('UPDATE users SET role = "admin" WHERE id = ?', [adminUser[0].id]);
                 console.log(`Utilisateur ${adminEmail} mis à jour en tant qu'administrateur.`);
             }
+
+            // Migration Settings
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS settings (
+                    user_id INT PRIMARY KEY,
+                    primary_color VARCHAR(20) DEFAULT '#00b06b',
+                    welcome_message TEXT,
+                    email_notifications BOOLEAN DEFAULT TRUE,
+                    whatsapp_notifications BOOLEAN DEFAULT FALSE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `);
+            console.log('Table settings vérifiée/créée');
 
         } catch (migErr) {
             console.error('Erreur migration:', migErr.message);
@@ -631,10 +648,87 @@ app.put('/api/users/:id', async (req, res) => {
     }
 });
 
+app.put('/api/users/:id/password', async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const { id } = req.params;
+    try {
+        const [users] = await db.execute('SELECT password_hash FROM users WHERE id = ?', [id]);
+        if (users.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+
+        const match = await bcrypt.compare(currentPassword, users[0].password_hash);
+        if (!match) return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [hash, id]);
+        res.json({ success: true, message: 'Mot de passe mis à jour' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.delete('/api/users/:id', async (req, res) => {
     try {
         await db.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
         res.json({ message: 'Utilisateur supprimé' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Settings Endpoints
+app.get('/api/settings/:userId', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM settings WHERE user_id = ?', [req.params.userId]);
+        if (rows.length === 0) {
+            return res.json({
+                primary_color: '#00b06b',
+                welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?',
+                email_notifications: 1,
+                whatsapp_notifications: 0
+            });
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/public/settings/:siteKey', async (req, res) => {
+    const { siteKey } = req.params;
+    try {
+        // Extract userId from 'asad_key_ID_live'
+        const match = siteKey.match(/asad_key_(\d+)_live/);
+        if (!match) return res.status(400).json({ error: 'Site Key invalide' });
+
+        const userId = match[1];
+        const [rows] = await db.execute('SELECT primary_color, welcome_message FROM settings WHERE user_id = ?', [userId]);
+
+        if (rows.length === 0) {
+            return res.json({
+                primary_color: '#00b06b',
+                welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?'
+            });
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/settings/:userId', async (req, res) => {
+    const { primary_color, welcome_message, email_notifications, whatsapp_notifications } = req.body;
+    const userId = req.params.userId;
+    try {
+        await db.execute(`
+            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            primary_color = VALUES(primary_color),
+            welcome_message = VALUES(welcome_message),
+            email_notifications = VALUES(email_notifications),
+            whatsapp_notifications = VALUES(whatsapp_notifications)
+        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications]);
+        res.json({ success: true, message: 'Paramètres enregistrés' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -720,24 +814,29 @@ io.on('connection', (socket) => {
         };
         socket.join(data.visitorId);
 
+        // Extract agent_id from siteKey (asad_key_X_live)
+        let agentId = null;
+        if (data.siteKey) {
+            const match = data.siteKey.match(/asad_key_(\d+)_live/);
+            if (match) agentId = parseInt(match[1]);
+        }
+
         let [convs] = await db.execute("SELECT id FROM conversations WHERE visitor_id = ? AND status = 'open'", [data.visitorId]);
         let conversationId;
 
         if (convs.length === 0) {
             const [result] = await db.execute(
-                'INSERT INTO conversations (visitor_id, first_name, last_name, whatsapp, problem) VALUES (?, ?, ?, ?, ?)',
-                [data.visitorId, data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null]
+                'INSERT INTO conversations (visitor_id, first_name, last_name, whatsapp, problem, agent_id) VALUES (?, ?, ?, ?, ?, ?)',
+                [data.visitorId, data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId]
             );
             conversationId = result.insertId;
         } else {
             conversationId = convs[0].id;
-            // Optionnel : Mettre à jour les infos si elles ont changé
-            if (data.firstName || data.lastName || data.whatsapp || data.problem) {
-                await db.execute(
-                    'UPDATE conversations SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), whatsapp = COALESCE(?, whatsapp), problem = COALESCE(?, problem) WHERE id = ?',
-                    [data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, conversationId]
-                );
-            }
+            // Update info if they changed, and ensure agent_id is set if it was null
+            await db.execute(
+                'UPDATE conversations SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), whatsapp = COALESCE(?, whatsapp), problem = COALESCE(?, problem), agent_id = COALESCE(agent_id, ?) WHERE id = ?',
+                [data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId, conversationId]
+            );
         }
 
         socket.conversationId = conversationId;
