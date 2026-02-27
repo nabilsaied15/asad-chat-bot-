@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardNavbar from '../components/DashboardNavbar';
+import LeftNav from '../components/LeftNav';
 import { useNavigate } from 'react-router-dom';
 import {
     User,
@@ -284,25 +285,7 @@ const Settings = () => {
             <DashboardNavbar />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Modern Sidebar Rail */}
-                <nav style={{
-                    width: '72px',
-                    backgroundColor: COLORS.secondary,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '24px 0',
-                    gap: '24px',
-                    zIndex: 20,
-                    boxShadow: '4px 0 20px rgba(0,0,0,0.05)'
-                }}>
-                    <motion.div whileHover={{ scale: 1.1 }} onClick={() => navigate('/dashboard')} style={{ color: 'white', opacity: 0.5, cursor: 'pointer', padding: '12px' }} title="Dashboard"><Monitor size={22} /></motion.div>
-                    <motion.div whileHover={{ scale: 1.1 }} onClick={() => navigate('/monitoring')} style={{ color: 'white', opacity: 0.5, cursor: 'pointer', padding: '12px' }} title="Monitoring"><Users size={22} /></motion.div>
-                    <motion.div whileHover={{ scale: 1.1 }} onClick={() => navigate('/reports')} style={{ color: 'white', opacity: 0.5, cursor: 'pointer', padding: '12px' }} title="Reports"><TrendingUp size={22} /></motion.div>
-                    <motion.div whileHover={{ scale: 1.1 }} onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 0.5, cursor: 'pointer', padding: '12px' }} title="Inbox"><MessageSquare size={22} /></motion.div>
-                    <div style={{ marginTop: 'auto', width: '3px', height: '24px', backgroundColor: COLORS.primary, borderRadius: '0 4px 4px 0', position: 'absolute', left: 0, transform: 'translateY(280px)' }}></div>
-                    <motion.div style={{ color: COLORS.primary, cursor: 'pointer', padding: '12px', backgroundColor: `${COLORS.primary}15`, borderRadius: '12px' }} title="Settings"><SettingsIcon size={22} /></motion.div>
-                </nav>
+                <LeftNav activePage="/settings" />
 
                 <main style={{ flex: 1, padding: '40px 60px', overflowY: 'auto' }}>
                     <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
