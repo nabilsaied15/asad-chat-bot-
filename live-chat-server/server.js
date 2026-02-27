@@ -118,7 +118,14 @@ app.get('/api/version', (req, res) => {
 app.get('/api/debug/db-check', async (req, res) => {
     try {
         const [tables] = await db.execute('SHOW TABLES');
-        const [settingsSchema] = await db.execute('DESCRIBE settings');
+        let settingsSchema = null;
+        try {
+            const [schema] = await db.execute('DESCRIBE settings');
+            settingsSchema = schema;
+        } catch (e) {
+            settingsSchema = `Error: ${e.message}`;
+        }
+
         res.json({
             status: 'ok',
             tables: tables.map(t => Object.values(t)[0]),
@@ -128,6 +135,24 @@ app.get('/api/debug/db-check', async (req, res) => {
                 DB_NAME: process.env.DB_NAME
             }
         });
+    } catch (err) {
+        res.status(500).json({ error: err.message, code: err.code });
+    }
+});
+
+app.get('/api/debug/force-repair-db', async (req, res) => {
+    try {
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS settings (
+                user_id INT PRIMARY KEY,
+                primary_color VARCHAR(20) DEFAULT '#00b06b',
+                welcome_message TEXT,
+                email_notifications BOOLEAN DEFAULT TRUE,
+                whatsapp_notifications BOOLEAN DEFAULT FALSE,
+                whatsapp_number VARCHAR(100)
+            )
+        `);
+        res.json({ status: 'ok', message: 'Table settings réparée/créée avec succès' });
     } catch (err) {
         res.status(500).json({ error: err.message, code: err.code });
     }
