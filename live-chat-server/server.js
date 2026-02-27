@@ -36,8 +36,8 @@ transporter.verify((error, success) => {
 });
 console.log(`[Notifications] Nodemailer: ${process.env.SMTP_HOST || 'smtp.gmail.com'}:${process.env.SMTP_PORT || 587}`);
 
-async function sendNotificationEmail(visitorId, text, targetEmail = null) {
-    const BREVO_API_KEY = process.env.BREVO_API_KEY;
+async function sendNotificationEmail(visitorId, text, targetEmail = null, customApiKey = null) {
+    const BREVO_API_KEY = customApiKey || process.env.BREVO_API_KEY;
     const NOTIF_EMAIL = targetEmail || process.env.NOTIFICATION_EMAIL;
 
     if (!BREVO_API_KEY) {
@@ -93,9 +93,9 @@ async function sendNotificationEmail(visitorId, text, targetEmail = null) {
     req.end();
 }
 
-async function sendWhatsAppNotification(visitorId, text, targetPhone = null) {
+async function sendWhatsAppNotification(visitorId, text, targetPhone = null, customApiKey = null) {
     const number = (targetPhone || process.env.WHATSAPP_NUMBER || "").replace(/\s+/g, "").replace("+", "");
-    const apikey = process.env.WHATSAPP_API_KEY || process.env.CALLMEBOT_API_KEY;
+    const apikey = customApiKey || process.env.WHATSAPP_API_KEY || process.env.CALLMEBOT_API_KEY;
 
     if (!number || number === '33600000000' || number === "") {
         console.log("[Notifications] WhatsApp non configuré (numéro manquant).");
@@ -122,6 +122,7 @@ async function sendWhatsAppNotification(visitorId, text, targetPhone = null) {
         });
     }).on('error', (e) => console.error(`[Notifications] WhatsApp Network Error: ${e.message}`));
 }
+
 
 app.get('/', (req, res) => {
     res.send('asad.to Backend API is running correctly. Version 1.0.1');
@@ -318,16 +319,26 @@ async function connectDB() {
                     welcome_message TEXT,
                     email_notifications BOOLEAN DEFAULT TRUE,
                     whatsapp_notifications BOOLEAN DEFAULT FALSE,
-                    whatsapp_number VARCHAR(100)
+                    whatsapp_number VARCHAR(100),
+                    brevo_api_key VARCHAR(255),
+                    callmebot_api_key VARCHAR(255)
                 )
             `);
 
             try {
-                // Force whatsapp_number to 100 characters for existing tables
+                const [columns] = await db.execute('SHOW COLUMNS FROM settings');
+                const columnNames = columns.map(c => c.Field);
+                if (!columnNames.includes('brevo_api_key')) {
+                    await db.execute('ALTER TABLE settings ADD COLUMN brevo_api_key VARCHAR(255)');
+                }
+                if (!columnNames.includes('callmebot_api_key')) {
+                    await db.execute('ALTER TABLE settings ADD COLUMN callmebot_api_key VARCHAR(255)');
+                }
                 await db.execute('ALTER TABLE settings MODIFY COLUMN whatsapp_number VARCHAR(100)');
             } catch (err) {
                 console.log('Migration Settings Note:', err.message);
             }
+
             console.log('Table settings vérifiée/créée');
 
             // Migration Stats (Ensure it exists for the summary page)
@@ -812,7 +823,7 @@ app.get('/api/public/settings/:siteKey', async (req, res) => {
 });
 
 app.post('/api/settings/:userId', async (req, res) => {
-    const { primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number } = req.body;
+    const { primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number, brevo_api_key, callmebot_api_key } = req.body;
     const userId = parseInt(req.params.userId);
     console.log(`[Settings] Save request for user ${userId}:`, req.body);
 
@@ -822,15 +833,18 @@ app.post('/api/settings/:userId', async (req, res) => {
 
     try {
         await db.execute(`
-            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number, brevo_api_key, callmebot_api_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             primary_color = VALUES(primary_color),
             welcome_message = VALUES(welcome_message),
             email_notifications = VALUES(email_notifications),
             whatsapp_notifications = VALUES(whatsapp_notifications),
-            whatsapp_number = VALUES(whatsapp_number)
-        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number]);
+            whatsapp_number = VALUES(whatsapp_number),
+            brevo_api_key = VALUES(brevo_api_key),
+            callmebot_api_key = VALUES(callmebot_api_key)
+        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number, brevo_api_key, callmebot_api_key]);
+
         res.json({ success: true, message: 'Paramètres enregistrés' });
     } catch (err) {
         console.error(`[Settings] Erreur lors de la sauvegarde pour l'utilisateur ${userId}:`, err.message);
@@ -855,12 +869,13 @@ app.post('/api/settings/:userId/test-notifications', async (req, res) => {
         if (type === 'email') {
             const [user] = await db.execute('SELECT email FROM users WHERE id = ?', [userId]);
             const email = user[0]?.email || process.env.NOTIFICATION_EMAIL;
-            await sendNotificationEmail("TEST_SYSTEM", "Ceci est un test de notification par email asad.to", email);
-            res.json({ success: true, message: `Email de test envoyé à ${email}` });
+            await sendNotificationEmail("TEST_SYSTEM", "Ceci est un test de notification par email asad.to", email, settings.brevo_api_key);
+            res.json({ success: true, message: `Email de test envoyé à ${email}${settings.brevo_api_key ? ' (via votre clé personnalisée)' : ''}` });
         } else if (type === 'whatsapp') {
             const number = settings.whatsapp_number || process.env.WHATSAPP_NUMBER;
-            await sendWhatsAppNotification("TEST_SYSTEM", "Ceci est un test de notification WhatsApp asad.to", number);
-            res.json({ success: true, message: `Séquence WhatsApp lancée pour ${number}. Vérifiez votre téléphone.` });
+            await sendWhatsAppNotification("TEST_SYSTEM", "Ceci est un test de notification WhatsApp asad.to", number, settings.callmebot_api_key);
+            res.json({ success: true, message: `Séquence WhatsApp lancée pour ${number}${settings.callmebot_api_key ? ' (via votre clé personnalisée)' : ''}. Vérifiez votre téléphone.` });
+
         } else {
             res.status(400).json({ error: 'Type de test invalide' });
         }
@@ -1018,11 +1033,12 @@ io.on('connection', (socket) => {
                             const agentEmail = agentProfile.length > 0 ? agentProfile[0].email : process.env.SMTP_USER;
 
                             if (email_notifications) {
-                                sendNotificationEmail(visitor.visitorId, data.text, agentEmail);
+                                sendNotificationEmail(visitor.visitorId, data.text, agentEmail, agentSettings[0].brevo_api_key);
                             }
                             if (whatsapp_notifications && whatsapp_number) {
-                                sendWhatsAppNotification(visitor.visitorId, data.text, whatsapp_number);
+                                sendWhatsAppNotification(visitor.visitorId, data.text, whatsapp_number, agentSettings[0].callmebot_api_key);
                             }
+
                         }
                     } else if (!isMuted) {
                         // Fallback logic if no agent assigned yet

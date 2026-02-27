@@ -108,8 +108,11 @@ const Settings = () => {
         welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?',
         email_notifications: true,
         whatsapp_notifications: false,
-        whatsapp_number: ''
+        whatsapp_number: '',
+        brevo_api_key: '',
+        callmebot_api_key: ''
     });
+
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -130,8 +133,11 @@ const Settings = () => {
                     ...data,
                     email_notifications: !!data.email_notifications,
                     whatsapp_notifications: !!data.whatsapp_notifications,
-                    whatsapp_number: data.whatsapp_number || ''
+                    whatsapp_number: data.whatsapp_number || '',
+                    brevo_api_key: data.brevo_api_key || '',
+                    callmebot_api_key: data.callmebot_api_key || ''
                 });
+
             }
         } catch (err) {
             console.error("Error fetching settings:", err);
@@ -721,7 +727,16 @@ const Settings = () => {
                                                                     <div>
                                                                         <div style={{ fontSize: '17px', fontWeight: '800', color: COLORS.secondary }}>{item.label}</div>
                                                                         <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
+                                                                        <a
+                                                                            href={item.id === 'email' ? "https://app.brevo.com/settings/keys/api" : "https://www.callmebot.com/blog/free-api-whatsapp-messages/"}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            style={{ fontSize: '11px', color: COLORS.primary, fontWeight: '700', textDecoration: 'none', display: 'block', marginTop: '4px' }}
+                                                                        >
+                                                                            Ouvrir la doc : Où trouver ma clé API ?
+                                                                        </a>
                                                                     </div>
+
                                                                 </div>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                                     <motion.button
@@ -763,25 +778,54 @@ const Settings = () => {
                                                                 </div>
                                                             </div>
 
-                                                            {item.id === 'whatsapp' && item.value && (
+                                                            {item.id === 'email' && item.value && (
                                                                 <motion.div
                                                                     initial={{ opacity: 0, height: 0 }}
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
                                                                 >
                                                                     <InputField
-                                                                        label="Numéro WhatsApp de destination"
-                                                                        placeholder="Ex: 33612345678"
-                                                                        value={settings.whatsapp_number}
-                                                                        onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
-                                                                        icon={Smartphone}
-                                                                        desc="Format international sans +, sans espaces (ex: 33600...)"
+                                                                        label="Clé API Brevo"
+                                                                        placeholder="xkeysib-..."
+                                                                        value={settings.brevo_api_key}
+                                                                        onChange={(e) => setSettings({ ...settings, brevo_api_key: e.target.value })}
+                                                                        icon={Zap}
+                                                                        desc="Nécessaire pour envoyer des emails depuis Render.com gratuitement."
                                                                     />
-                                                                    <p style={{ fontSize: '12px', color: COLORS.gray, marginTop: '8px', fontWeight: '500' }}>
-                                                                        C'est le numéro qui recevra les alertes par un lien WhatsApp.
+                                                                </motion.div>
+                                                            )}
+
+
+                                                            {item.id === 'whatsapp' && item.value && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
+                                                                >
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                                        <InputField
+                                                                            label="Numéro WhatsApp de destination"
+                                                                            placeholder="Ex: 33612345678"
+                                                                            value={settings.whatsapp_number}
+                                                                            onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                                                                            icon={Smartphone}
+                                                                            desc="Format international sans +, sans espaces (ex: 33600...)"
+                                                                        />
+                                                                        <InputField
+                                                                            label="Clé API CallMeBot"
+                                                                            placeholder="123456"
+                                                                            value={settings.callmebot_api_key}
+                                                                            onChange={(e) => setSettings({ ...settings, callmebot_api_key: e.target.value })}
+                                                                            icon={Lock}
+                                                                            desc="Obtenue en envoyant 'I allow callmebot...' au bot WhatsApp."
+                                                                        />
+                                                                    </div>
+                                                                    <p style={{ fontSize: '12px', color: COLORS.gray, marginTop: '12px', fontWeight: '500' }}>
+                                                                        C'est le numéro qui recevra les alertes. Si vous n'avez pas de clé, utilisez le lien d'aide ci-dessus.
                                                                     </p>
                                                                 </motion.div>
                                                             )}
+
                                                         </motion.div>
                                                     ))}
 
