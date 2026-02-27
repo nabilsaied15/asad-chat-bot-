@@ -259,7 +259,7 @@ async function connectDB() {
                 console.log(`Utilisateur ${adminEmail} mis à jour en tant qu'administrateur.`);
             }
 
-            // Migration Settings
+            // Migration Settings - Simplified to ensure creation on production
             await db.execute(`
                 CREATE TABLE IF NOT EXISTS settings (
                     user_id INT PRIMARY KEY,
@@ -267,23 +267,17 @@ async function connectDB() {
                     welcome_message TEXT,
                     email_notifications BOOLEAN DEFAULT TRUE,
                     whatsapp_notifications BOOLEAN DEFAULT FALSE,
-                    whatsapp_number VARCHAR(100),
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    whatsapp_number VARCHAR(100)
                 )
             `);
+
             try {
-                const [settingsColumns] = await db.execute('SHOW COLUMNS FROM settings');
-                const settingsColumnNames = settingsColumns.map(c => c.Field);
-                if (!settingsColumnNames.includes('whatsapp_number')) {
-                    await db.execute('ALTER TABLE settings ADD COLUMN whatsapp_number VARCHAR(100)');
-                    console.log('Migration: Colonne whatsapp_number ajoutée à settings');
-                } else {
-                    // Mettre à jour la longueur si déjà présente (pour être sûr)
-                    await db.execute('ALTER TABLE settings MODIFY COLUMN whatsapp_number VARCHAR(100)');
-                }
-            } catch (setErr) {
-                console.error('Erreur migration settings columns:', setErr.message);
+                // Force whatsapp_number to 100 characters for existing tables
+                await db.execute('ALTER TABLE settings MODIFY COLUMN whatsapp_number VARCHAR(100)');
+            } catch (err) {
+                console.log('Migration Settings Note:', err.message);
             }
+            console.log('Table settings vérifiée/créée');
 
             // Migration Stats (Ensure it exists for the summary page)
             await db.execute(`
@@ -295,9 +289,6 @@ async function connectDB() {
                 )
             `);
             console.log('Table stats vérifiée/créée');
-
-            console.log('Migration Settings: Success (whatsapp_number VARCHAR(100))');
-            console.log('Table settings vérifiée/créée');
         } catch (migErr) {
             console.error('CRITICAL Migration Error:', migErr.message);
         }
