@@ -22,7 +22,6 @@ const Archives = () => {
             const res = await fetch(`${config.API_URL}/api/conversations?status=all`);
             if (res.ok) {
                 const data = await res.json();
-                console.log("Archives data received:", data);
                 setArchives(data);
             }
         } catch (err) {
