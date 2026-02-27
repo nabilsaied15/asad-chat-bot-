@@ -205,7 +205,17 @@ async function connectDB() {
         }
 
         db = await mysql.createPool(dbConfig);
-        console.log('Connecté à la base de données MySQL');
+
+        // Test de connexion immédiat
+        try {
+            await db.execute('SELECT 1');
+            console.log('Connecté à la base de données MySQL et vérifié.');
+        } catch (connErr) {
+            console.error('ALERTE: Pool créé mais connexion impossible:', connErr.message);
+            if (connErr.code === 'ENOTFOUND') {
+                console.error('CONSEIL: Le nom d\'hôte (DB_HOST) est introuvable. Vérifiez vos variables d\'environnement Render.');
+            }
+        }
 
         // Robust migration
         try {
@@ -926,43 +936,49 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
 // Socket logic
 io.on('connection', (socket) => {
     socket.on('register_visitor', async (data) => {
-        onlineVisitors[socket.id] = {
-            ...data,
-            socketId: socket.id,
-            joinedAt: Date.now(),
-            lastMessage: { text: null, sender: null, timestamp: null }
-        };
-        socket.join(data.visitorId);
+        try {
+            onlineVisitors[socket.id] = {
+                ...data,
+                socketId: socket.id,
+                joinedAt: Date.now(),
+                lastMessage: { text: null, sender: null, timestamp: null }
+            };
+            socket.join(data.visitorId);
 
-        // Extract agent_id from siteKey (asad_key_X_live)
-        let agentId = null;
-        if (data.siteKey) {
-            const match = data.siteKey.match(/asad_key_(\d+)_live/);
-            if (match) agentId = parseInt(match[1]);
+            // Extract agent_id from siteKey (asad_key_X_live)
+            let agentId = null;
+            if (data.siteKey) {
+                const match = data.siteKey.match(/asad_key_(\d+)_live/);
+                if (match) agentId = parseInt(match[1]);
+            }
+
+            if (db) {
+                let [convs] = await db.execute("SELECT id FROM conversations WHERE visitor_id = ? AND status = 'open'", [data.visitorId]);
+                let conversationId;
+
+                if (convs.length === 0) {
+                    const [result] = await db.execute(
+                        'INSERT INTO conversations (visitor_id, first_name, last_name, whatsapp, problem, agent_id) VALUES (?, ?, ?, ?, ?, ?)',
+                        [data.visitorId, data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId]
+                    );
+                    conversationId = result.insertId;
+                } else {
+                    conversationId = convs[0].id;
+                    await db.execute(
+                        'UPDATE conversations SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), whatsapp = COALESCE(?, whatsapp), problem = COALESCE(?, problem), agent_id = COALESCE(agent_id, ?) WHERE id = ?',
+                        [data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId, conversationId]
+                    );
+                }
+
+                socket.conversationId = conversationId;
+                const [history] = await db.execute('SELECT sender_type as sender, content as text, created_at as timestamp FROM messages WHERE conversation_id = ? ORDER BY created_at ASC', [conversationId]);
+                socket.emit('chat_history', history);
+            }
+
+            io.to('agents_room').emit('visitor_list', Object.values(onlineVisitors));
+        } catch (err) {
+            console.error('[Socket] Error in register_visitor:', err.message);
         }
-
-        let [convs] = await db.execute("SELECT id FROM conversations WHERE visitor_id = ? AND status = 'open'", [data.visitorId]);
-        let conversationId;
-
-        if (convs.length === 0) {
-            const [result] = await db.execute(
-                'INSERT INTO conversations (visitor_id, first_name, last_name, whatsapp, problem, agent_id) VALUES (?, ?, ?, ?, ?, ?)',
-                [data.visitorId, data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId]
-            );
-            conversationId = result.insertId;
-        } else {
-            conversationId = convs[0].id;
-            // Update info if they changed, and ensure agent_id is set if it was null
-            await db.execute(
-                'UPDATE conversations SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), whatsapp = COALESCE(?, whatsapp), problem = COALESCE(?, problem), agent_id = COALESCE(agent_id, ?) WHERE id = ?',
-                [data.firstName || null, data.lastName || null, data.whatsapp || null, data.problem || null, agentId, conversationId]
-            );
-        }
-
-        socket.conversationId = conversationId;
-        const [history] = await db.execute('SELECT sender_type as sender, content as text, created_at as timestamp FROM messages WHERE conversation_id = ? ORDER BY created_at ASC', [conversationId]);
-        socket.emit('chat_history', history);
-        io.to('agents_room').emit('visitor_list', Object.values(onlineVisitors));
     });
 
     socket.on('register_agent', (data) => {
@@ -1018,18 +1034,24 @@ io.on('connection', (socket) => {
     });
 
     socket.on('agent_message', async (data) => {
-        let [convs] = await db.execute("SELECT id FROM conversations WHERE visitor_id = ? AND status = 'open'", [data.visitorId]);
-        if (convs.length > 0) {
-            await db.execute("INSERT INTO messages (conversation_id, sender_type, content) VALUES (?, 'agent', ?)", [convs[0].id, data.text]);
+        try {
+            if (db) {
+                let [convs] = await db.execute("SELECT id FROM conversations WHERE visitor_id = ? AND status = 'open'", [data.visitorId]);
+                if (convs.length > 0) {
+                    await db.execute("INSERT INTO messages (conversation_id, sender_type, content) VALUES (?, 'agent', ?)", [convs[0].id, data.text]);
 
-            const visitorSocket = Object.keys(onlineVisitors).find(key => onlineVisitors[key].visitorId === data.visitorId);
-            if (visitorSocket) {
-                onlineVisitors[visitorSocket].isBotActive = false;
-                onlineVisitors[visitorSocket].lastMessage = { text: data.text, sender: 'agent', timestamp: Date.now() };
-                io.to('agents_room').emit('visitor_list', Object.values(onlineVisitors));
+                    const visitorSocket = Object.keys(onlineVisitors).find(key => onlineVisitors[key].visitorId === data.visitorId);
+                    if (visitorSocket) {
+                        onlineVisitors[visitorSocket].isBotActive = false;
+                        onlineVisitors[visitorSocket].lastMessage = { text: data.text, sender: 'agent', timestamp: Date.now() };
+                        io.to('agents_room').emit('visitor_list', Object.values(onlineVisitors));
+                    }
+                }
             }
+            io.to(data.visitorId).emit('agent_message', { text: data.text, timestamp: Date.now() });
+        } catch (err) {
+            console.error('[Socket] Error in agent_message:', err.message);
         }
-        io.to(data.visitorId).emit('agent_message', { text: data.text, timestamp: Date.now() });
     });
 
     socket.on('typing', (data) => {

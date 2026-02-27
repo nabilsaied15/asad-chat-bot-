@@ -925,6 +925,11 @@ const Settings = () => {
                                         User ID: {user.id}<br />
                                         API URL: {config.API_URL}<br />
                                         Last Error: {status.msg}
+                                        {status.msg.includes('ENOTFOUND') && (
+                                            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', color: '#9a3412' }}>
+                                                <strong>CONSEIL :</strong> L'erreur ENOTFOUND indique que l'adresse de votre base de données (DB_HOST) est incorrecte dans Render. Vérifiez qu'il n'y a pas d'espace en trop.
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
