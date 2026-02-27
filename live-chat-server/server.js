@@ -699,6 +699,11 @@ app.post('/api/users', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
+
+    if (!db) {
+        return res.status(503).json({ error: 'La base de données n\'est pas encore connectée. Veuillez réessayer dans quelques instants ou vérifier votre configuration DB_HOST.' });
+    }
+
     try {
         const [users] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
         if (users.length === 0) return res.status(401).json({ error: 'Identifiants invalides' });
