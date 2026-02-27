@@ -108,8 +108,11 @@ const Settings = () => {
         welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?',
         email_notifications: true,
         whatsapp_notifications: false,
-        whatsapp_number: ''
+        whatsapp_number: '',
+        brevo_api_key: '',
+        callmebot_api_key: ''
     });
+
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -130,11 +133,19 @@ const Settings = () => {
                     ...data,
                     email_notifications: !!data.email_notifications,
                     whatsapp_notifications: !!data.whatsapp_notifications,
-                    whatsapp_number: data.whatsapp_number || ''
+                    whatsapp_number: data.whatsapp_number || '',
+                    brevo_api_key: data.brevo_api_key || '',
+                    callmebot_api_key: data.callmebot_api_key || ''
                 });
+
             }
         } catch (err) {
             console.error("Error fetching settings:", err);
+            // Handle cases where the backend might return non-JSON content
+            if (err instanceof SyntaxError) {
+                console.error("The server returned invalid JSON.");
+            }
+            setStatus({ type: 'error', msg: "Impossible de récupérer les paramètres. Vérifiez votre connexion." });
         } finally {
             setLoading(false);
         }
@@ -181,12 +192,41 @@ const Settings = () => {
             if (response.ok) {
                 setStatus({ type: 'success', msg: 'Paramètres sauvegardés !' });
             } else {
-                setStatus({ type: 'error', msg: 'Erreur lors de la sauvegarde.' });
+                let errorMsg = 'Erreur lors de la sauvegarde.';
+                try {
+                    const data = await response.json();
+                    if (data.error) {
+                        errorMsg = `${data.error} ${data.code ? `(${data.code})` : ''}: ${data.details || ''}`;
+                    }
+                } catch (e) {
+                    console.error("Non-JSON error response received");
+                }
+                setStatus({ type: 'error', msg: errorMsg });
             }
         } catch (err) {
-            setStatus({ type: 'error', msg: 'Erreur réseau.' });
+            setStatus({ type: 'error', msg: 'Erreur réseau : ' + err.message });
         }
-        setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
+        setTimeout(() => setStatus({ type: '', msg: '' }), 5000);
+    };
+
+    const handleTestNotification = async (type) => {
+        setStatus({ type: 'loading', msg: `Envoi du test ${type}...` });
+        try {
+            const response = await fetch(`${config.API_URL}/api/settings/${user.id}/test-notifications`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setStatus({ type: 'success', msg: data.message });
+            } else {
+                setStatus({ type: 'error', msg: data.error || 'Erreur lors du test.' });
+            }
+        } catch (err) {
+            setStatus({ type: 'error', msg: "Impossible de joindre le serveur de test." });
+        }
+        setTimeout(() => setStatus({ type: '', msg: '' }), 6000);
     };
 
     const handlePasswordChange = async (e) => {
@@ -687,27 +727,74 @@ const Settings = () => {
                                                                     <div>
                                                                         <div style={{ fontSize: '17px', fontWeight: '800', color: COLORS.secondary }}>{item.label}</div>
                                                                         <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
+                                                                        <a
+                                                                            href={item.id === 'email' ? "https://app.brevo.com/settings/keys/api" : "https://www.callmebot.com/blog/free-api-whatsapp-messages/"}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            style={{ fontSize: '11px', color: COLORS.primary, fontWeight: '700', textDecoration: 'none', display: 'block', marginTop: '4px' }}
+                                                                        >
+                                                                            Ouvrir la doc : Où trouver ma clé API ?
+                                                                        </a>
+                                                                    </div>
+
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                    <motion.button
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                        onClick={() => handleTestNotification(item.id)}
+                                                                        style={{
+                                                                            fontSize: '11px',
+                                                                            fontWeight: '800',
+                                                                            textTransform: 'uppercase',
+                                                                            padding: '6px 12px',
+                                                                            borderRadius: '8px',
+                                                                            border: '1px solid #e2e8f0',
+                                                                            backgroundColor: 'white',
+                                                                            color: COLORS.gray,
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                    >
+                                                                        Tester
+                                                                    </motion.button>
+                                                                    <div
+                                                                        onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
+                                                                        style={{
+                                                                            width: '56px',
+                                                                            height: '30px',
+                                                                            backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
+                                                                            borderRadius: '20px',
+                                                                            position: 'relative',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'background 0.3s'
+                                                                        }}
+                                                                    >
+                                                                        <motion.div
+                                                                            animate={{ x: item.value ? 28 : 2 }}
+                                                                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                                            style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                                                        />
                                                                     </div>
                                                                 </div>
-                                                                <div
-                                                                    onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
-                                                                    style={{
-                                                                        width: '56px',
-                                                                        height: '30px',
-                                                                        backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
-                                                                        borderRadius: '20px',
-                                                                        position: 'relative',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'background 0.3s'
-                                                                    }}
-                                                                >
-                                                                    <motion.div
-                                                                        animate={{ x: item.value ? 28 : 2 }}
-                                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                                                        style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                                                                    />
-                                                                </div>
                                                             </div>
+
+                                                            {item.id === 'email' && item.value && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
+                                                                >
+                                                                    <InputField
+                                                                        label="Clé API Brevo"
+                                                                        placeholder="xkeysib-..."
+                                                                        value={settings.brevo_api_key}
+                                                                        onChange={(e) => setSettings({ ...settings, brevo_api_key: e.target.value })}
+                                                                        icon={Zap}
+                                                                        desc="Nécessaire pour envoyer des emails depuis Render.com gratuitement."
+                                                                    />
+                                                                </motion.div>
+                                                            )}
+
 
                                                             {item.id === 'whatsapp' && item.value && (
                                                                 <motion.div
@@ -715,19 +802,30 @@ const Settings = () => {
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
                                                                 >
-                                                                    <InputField
-                                                                        label="Numéro WhatsApp de destination"
-                                                                        placeholder="Ex: 33612345678"
-                                                                        value={settings.whatsapp_number}
-                                                                        onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
-                                                                        icon={Smartphone}
-                                                                        desc="Format international sans +, sans espaces (ex: 33600...)"
-                                                                    />
-                                                                    <p style={{ fontSize: '12px', color: COLORS.gray, marginTop: '8px', fontWeight: '500' }}>
-                                                                        C'est le numéro qui recevra les alertes par un lien WhatsApp.
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                                                        <InputField
+                                                                            label="Numéro WhatsApp de destination"
+                                                                            placeholder="Ex: 33612345678"
+                                                                            value={settings.whatsapp_number}
+                                                                            onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                                                                            icon={Smartphone}
+                                                                            desc="Format international sans +, sans espaces (ex: 33600...)"
+                                                                        />
+                                                                        <InputField
+                                                                            label="Clé API CallMeBot"
+                                                                            placeholder="123456"
+                                                                            value={settings.callmebot_api_key}
+                                                                            onChange={(e) => setSettings({ ...settings, callmebot_api_key: e.target.value })}
+                                                                            icon={Lock}
+                                                                            desc="Obtenue en envoyant 'I allow callmebot...' au bot WhatsApp."
+                                                                        />
+                                                                    </div>
+                                                                    <p style={{ fontSize: '12px', color: COLORS.gray, marginTop: '12px', fontWeight: '500' }}>
+                                                                        C'est le numéro qui recevra les alertes. Si vous n'avez pas de clé, utilisez le lien d'aide ci-dessus.
                                                                     </p>
                                                                 </motion.div>
                                                             )}
+
                                                         </motion.div>
                                                     ))}
 
@@ -838,6 +936,45 @@ const Settings = () => {
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
+                                )}
+                                {/* Version Footer */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '24px',
+                                    right: '48px',
+                                    fontSize: '11px',
+                                    color: COLORS.gray,
+                                    fontWeight: '700',
+                                    opacity: 0.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <Shield size={10} /> v1.0.1 - Système asad.to protégé
+                                </div>
+
+                                {status.type === 'error' && (
+                                    <div style={{
+                                        marginTop: '40px',
+                                        padding: '16px',
+                                        backgroundColor: '#fff1f2',
+                                        border: '1px solid #fda4af',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        color: '#991b1b',
+                                        fontFamily: 'monospace',
+                                        wordBreak: 'break-all'
+                                    }}>
+                                        <strong>DEBUG INFO:</strong><br />
+                                        User ID: {user.id}<br />
+                                        API URL: {config.API_URL}<br />
+                                        Last Error: {status.msg}
+                                        {status.msg.includes('ENOTFOUND') && (
+                                            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', color: '#9a3412' }}>
+                                                <strong>CONSEIL :</strong> L'erreur ENOTFOUND indique que l'adresse de votre base de données (DB_HOST) est incorrecte dans Render. Vérifiez qu'il n'y a pas d'espace en trop.
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
