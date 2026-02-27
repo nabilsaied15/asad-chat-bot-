@@ -203,6 +203,26 @@ const Settings = () => {
         setTimeout(() => setStatus({ type: '', msg: '' }), 5000);
     };
 
+    const handleTestNotification = async (type) => {
+        setStatus({ type: 'loading', msg: `Envoi du test ${type}...` });
+        try {
+            const response = await fetch(`${config.API_URL}/api/settings/${user.id}/test-notifications`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setStatus({ type: 'success', msg: data.message });
+            } else {
+                setStatus({ type: 'error', msg: data.error || 'Erreur lors du test.' });
+            }
+        } catch (err) {
+            setStatus({ type: 'error', msg: "Impossible de joindre le serveur de test." });
+        }
+        setTimeout(() => setStatus({ type: '', msg: '' }), 6000);
+    };
+
     const handlePasswordChange = async (e) => {
         e.preventDefault();
         if (passwords.new !== passwords.confirm) {
@@ -703,23 +723,43 @@ const Settings = () => {
                                                                         <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
                                                                     </div>
                                                                 </div>
-                                                                <div
-                                                                    onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
-                                                                    style={{
-                                                                        width: '56px',
-                                                                        height: '30px',
-                                                                        backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
-                                                                        borderRadius: '20px',
-                                                                        position: 'relative',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'background 0.3s'
-                                                                    }}
-                                                                >
-                                                                    <motion.div
-                                                                        animate={{ x: item.value ? 28 : 2 }}
-                                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                                                        style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                                                                    />
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                    <motion.button
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                        onClick={() => handleTestNotification(item.id)}
+                                                                        style={{
+                                                                            fontSize: '11px',
+                                                                            fontWeight: '800',
+                                                                            textTransform: 'uppercase',
+                                                                            padding: '6px 12px',
+                                                                            borderRadius: '8px',
+                                                                            border: '1px solid #e2e8f0',
+                                                                            backgroundColor: 'white',
+                                                                            color: COLORS.gray,
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                    >
+                                                                        Tester
+                                                                    </motion.button>
+                                                                    <div
+                                                                        onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
+                                                                        style={{
+                                                                            width: '56px',
+                                                                            height: '30px',
+                                                                            backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
+                                                                            borderRadius: '20px',
+                                                                            position: 'relative',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'background 0.3s'
+                                                                        }}
+                                                                    >
+                                                                        <motion.div
+                                                                            animate={{ x: item.value ? 28 : 2 }}
+                                                                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                                            style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                                                        />
+                                                                    </div>
                                                                 </div>
                                                             </div>
 

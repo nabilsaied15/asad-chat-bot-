@@ -94,17 +94,33 @@ async function sendNotificationEmail(visitorId, text, targetEmail = null) {
 }
 
 async function sendWhatsAppNotification(visitorId, text, targetPhone = null) {
-    const number = targetPhone || process.env.WHATSAPP_NUMBER;
-    if (!number || number === '33600000000') {
+    const number = (targetPhone || process.env.WHATSAPP_NUMBER || "").replace(/\s+/g, "").replace("+", "");
+    const apikey = process.env.WHATSAPP_API_KEY || process.env.CALLMEBOT_API_KEY;
+
+    if (!number || number === '33600000000' || number === "") {
         console.log("[Notifications] WhatsApp non configuré (numéro manquant).");
         return;
     }
 
-    const message = `Nouveau message asad.to de ${visitorId}: ${text}`;
-    const encodedMsg = encodeURIComponent(message);
-    const waLink = `https://wa.me/${number}?text=${encodedMsg}`;
+    if (!apikey) {
+        console.log("[Notifications] WhatsApp API Key manquante (CallMeBot).");
+        const encodedMsg = encodeURIComponent(`Nouveau message de ${visitorId}: ${text}`);
+        console.log(`[Notifications] ALERTE WHATSAPP (Lien :): https://wa.me/${number}?text=${encodedMsg}`);
+        return;
+    }
 
-    console.log(`[Notifications] ALERTE WHATSAPP pour ${number}: ${waLink}`);
+    const message = `*Notification asad.to*\nVisiteur: ${visitorId.substring(0, 8)}\nMessage: ${text}\nLien: https://asad-chat-bot.vercel.app/inbox`;
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${number}&text=${encodeURIComponent(message)}&apikey=${apikey}`;
+
+    const https = require('https');
+    https.get(url, (res) => {
+        let body = '';
+        res.on('data', d => body += d);
+        res.on('end', () => {
+            console.log(`[Notifications] WhatsApp CallMeBot Status: ${res.statusCode}`);
+            if (res.statusCode !== 200) console.error(`[Notifications] WhatsApp Error Body: ${body}`);
+        });
+    }).on('error', (e) => console.error(`[Notifications] WhatsApp Network Error: ${e.message}`));
 }
 
 app.get('/', (req, res) => {
@@ -813,6 +829,32 @@ app.post('/api/settings/:userId', async (req, res) => {
 });
 
 // Conversations Endpoints
+app.post('/api/settings/:userId/test-notifications', async (req, res) => {
+    const { type } = req.body;
+    const userId = parseInt(req.params.userId);
+
+    try {
+        const [rows] = await db.execute('SELECT * FROM settings WHERE user_id = ?', [userId]);
+        const settings = rows[0] || {};
+
+        if (type === 'email') {
+            const [user] = await db.execute('SELECT email FROM users WHERE id = ?', [userId]);
+            const email = user[0]?.email || process.env.NOTIFICATION_EMAIL;
+            await sendNotificationEmail("TEST_SYSTEM", "Ceci est un test de notification par email asad.to", email);
+            res.json({ success: true, message: `Email de test envoyé à ${email}` });
+        } else if (type === 'whatsapp') {
+            const number = settings.whatsapp_number || process.env.WHATSAPP_NUMBER;
+            await sendWhatsAppNotification("TEST_SYSTEM", "Ceci est un test de notification WhatsApp asad.to", number);
+            res.json({ success: true, message: `Séquence WhatsApp lancée pour ${number}. Vérifiez votre téléphone.` });
+        } else {
+            res.status(400).json({ error: 'Type de test invalide' });
+        }
+    } catch (err) {
+        console.error('[Settings] Test Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/conversations', async (req, res) => {
     const { status } = req.query;
     try {
