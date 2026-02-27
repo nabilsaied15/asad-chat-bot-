@@ -36,6 +36,7 @@ const InboxPage = () => {
     const [statusFilter, setStatusFilter] = useState('open'); // 'open' or 'deleted'
     const [quickReplies, setQuickReplies] = useState([]);
     const [showStatusMenu, setShowStatusMenu] = useState(false);
+    const [loading, setLoading] = useState(true);
     const socketRef = useRef();
 
     useEffect(() => {
@@ -70,17 +71,34 @@ const InboxPage = () => {
         return () => socketRef.current.disconnect();
     }, [navigate, selectedChat, statusFilter]);
 
-    // Handle Deep Linking from Notifications
+    // Handle Deep Linking from Notifications or Archives
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const vid = params.get('visitorId');
-        if (vid && conversations.length > 0) {
+        if (vid) {
             const target = conversations.find(c => c.visitor_id === vid);
-            if (target && (!selectedChat || selectedChat.visitor_id !== vid)) {
-                fetchMessages(target);
+            if (target) {
+                if (!selectedChat || selectedChat.id !== target.id) {
+                    fetchMessages(target);
+                }
+            } else if (loading === false) {
+                // If not found in current list (maybe because of status filter), we could fetch it specifically
+                fetchConversationByVisitorId(vid);
             }
         }
     }, [conversations, window.location.search]);
+
+    const fetchConversationByVisitorId = async (vid) => {
+        try {
+            const res = await fetch(`${config.API_URL}/api/conversations?visitorId=${vid}`);
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                fetchMessages(data[0]);
+            }
+        } catch (err) {
+            console.error('Failed to fetch specific conversation');
+        }
+    };
 
     const fetchQuickReplies = async () => {
         try {
@@ -99,6 +117,8 @@ const InboxPage = () => {
             setConversations(data);
         } catch (err) {
             console.error('Failed to fetch conversations');
+        } finally {
+            setLoading(false);
         }
     };
 

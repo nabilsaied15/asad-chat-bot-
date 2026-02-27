@@ -18,10 +18,18 @@ const QuickReplies = () => {
     const fetchReplies = async () => {
         try {
             const res = await fetch(`${config.API_URL}/api/quick-replies`);
+            if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new TypeError("L'API n'a pas renvoyé de JSON !");
+            }
+
             const data = await res.json();
-            setReplies(data);
+            setReplies(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error("Erreur chargement réponses:", err);
+            setReplies([]); // Fallback to empty array to avoid crashes
         } finally {
             setLoading(false);
         }
