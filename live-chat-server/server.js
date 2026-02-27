@@ -126,11 +126,11 @@ async function sendWhatsAppNotification(visitorId, text, targetPhone = null, cus
 
 
 app.get('/', (req, res) => {
-    res.send('asad.to Backend API is running correctly. Version 1.0.1');
+    res.send('asad.to Backend API is running correctly. Version 1.0.2');
 });
 
 app.get('/api/version', (req, res) => {
-    res.json({ version: '1.0.1', status: 'ready', database: db ? 'connected' : 'disconnected' });
+    res.json({ version: '1.0.2', status: 'ready', database: db ? 'connected' : 'disconnected' });
 });
 
 app.get('/api/debug/db-check', async (req, res) => {
@@ -329,7 +329,7 @@ async function connectDB() {
                 console.log(`Utilisateur ${adminEmail} mis à jour en tant qu'administrateur.`);
             }
 
-            // Migration Settings - Simplified to ensure creation on production
+            // Migration Settings - Robust version that adds missing columns
             await db.execute(`
                 CREATE TABLE IF NOT EXISTS settings (
                     user_id INT PRIMARY KEY,
@@ -342,6 +342,20 @@ async function connectDB() {
                     callmebot_api_key VARCHAR(255)
                 )
             `);
+
+            // Check and add missing columns if table already exists
+            const [settingsColumns] = await db.execute('SHOW COLUMNS FROM settings');
+            const settingsColumnNames = settingsColumns.map(c => c.Field);
+
+            if (!settingsColumnNames.includes('brevo_api_key')) {
+                console.log('[Migration] Ajout de la colonne brevo_api_key');
+                await db.execute('ALTER TABLE settings ADD COLUMN brevo_api_key VARCHAR(255)');
+            }
+            if (!settingsColumnNames.includes('callmebot_api_key')) {
+                console.log('[Migration] Ajout de la colonne callmebot_api_key');
+                await db.execute('ALTER TABLE settings ADD COLUMN callmebot_api_key VARCHAR(255)');
+            }
+
 
             try {
                 const [columns] = await db.execute('SHOW COLUMNS FROM settings');
@@ -850,19 +864,27 @@ app.post('/api/settings/:userId', async (req, res) => {
     }
 
     try {
+        console.log(`[SQL] Sauvegarde des paramètres pour UserID: ${userId}`);
         await db.execute(`
-            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number, brevo_api_key, callmebot_api_key)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            primary_color = VALUES(primary_color),
-            welcome_message = VALUES(welcome_message),
-            email_notifications = VALUES(email_notifications),
-            whatsapp_notifications = VALUES(whatsapp_notifications),
-            whatsapp_number = VALUES(whatsapp_number),
-            brevo_api_key = VALUES(brevo_api_key),
-            callmebot_api_key = VALUES(callmebot_api_key)
-        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number, brevo_api_key, callmebot_api_key]);
-
+                INSERT INTO settings (
+                    user_id, primary_color, welcome_message,
+                    email_notifications, whatsapp_notifications, whatsapp_number,
+                    brevo_api_key, callmebot_api_key
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    primary_color = VALUES(primary_color),
+                    welcome_message = VALUES(welcome_message),
+                    email_notifications = VALUES(email_notifications),
+                    whatsapp_notifications = VALUES(whatsapp_notifications),
+                    whatsapp_number = VALUES(whatsapp_number),
+                    brevo_api_key = VALUES(brevo_api_key),
+                    callmebot_api_key = VALUES(callmebot_api_key)
+            `, [
+            userId, primary_color, welcome_message,
+            email_notifications ? 1 : 0, whatsapp_notifications ? 1 : 0, whatsapp_number,
+            brevo_api_key || null, callmebot_api_key || null
+        ]);
         res.json({ success: true, message: 'Paramètres enregistrés' });
     } catch (err) {
         console.error(`[Settings] Erreur lors de la sauvegarde pour l'utilisateur ${userId}:`, err.message);
