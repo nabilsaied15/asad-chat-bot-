@@ -112,7 +112,8 @@ const InboxPage = () => {
 
     const fetchConversations = async () => {
         try {
-            const res = await fetch(`${config.API_URL}/api/conversations?status=${statusFilter}`);
+            // On récupère toutes les conversations (sauf deleted) au lieu de filtrer par l'état local
+            const res = await fetch(`${config.API_URL}/api/conversations?status=all`);
             const data = await res.json();
             setConversations(data);
         } catch (err) {
