@@ -310,9 +310,26 @@ const InboxPage = () => {
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <span style={{ fontWeight: '700', fontSize: '14px' }}>
                                             {conv.first_name ? `${conv.first_name} ${conv.last_name || ''}` : `Visitor ${conv.visitor_id ? conv.visitor_id.substring(0, 4) : '####'}`}
+                                        </span>
+                                        <span style={{
+                                            fontSize: '9px',
+                                            padding: '1px 6px',
+                                            borderRadius: '10px',
+                                            fontWeight: '700',
+                                            textTransform: 'uppercase',
+                                            backgroundColor: conv.status === 'resolved' ? '#dcfce7' :
+                                                conv.status === 'pending' ? '#fef3c7' :
+                                                    conv.status === 'abandoned' ? '#fee2e2' : '#dbeafe',
+                                            color: conv.status === 'resolved' ? '#166534' :
+                                                conv.status === 'pending' ? '#92400e' :
+                                                    conv.status === 'abandoned' ? '#991b1b' : '#1e40af',
+                                        }}>
+                                            {conv.status === 'resolved' ? 'Résolu' :
+                                                conv.status === 'pending' ? 'En attente' :
+                                                    conv.status === 'abandoned' ? 'Abandonné' : 'En cours'}
                                         </span>
                                         {conv.is_muted && <BellOff size={12} style={{ color: '#9ca3af' }} />}
                                     </div>
