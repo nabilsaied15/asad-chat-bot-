@@ -1,34 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardNavbar from '../components/DashboardNavbar';
 import { Plus, Trash2, Edit2, Search, Zap } from 'lucide-react';
 import LeftNav from '../components/LeftNav';
+import config from '../config';
 
 const QuickReplies = () => {
-    const [replies, setReplies] = useState([
-        { id: 1, shortcut: '/bonjour', text: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' },
-        { id: 2, shortcut: '/au_revoir', text: 'Merci de nous avoir contactés. Bonne journée !' },
-        { id: 3, shortcut: '/attente', text: 'Je vérifie cela pour vous, un instant s\'il vous plaît.' }
-    ]);
+    const [replies, setReplies] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [currentReply, setCurrentReply] = useState({ shortcut: '', text: '' });
+    const [loading, setLoading] = useState(true);
 
-    const handleSave = (e) => {
-        e.preventDefault();
-        if (currentReply.id) {
-            setReplies(replies.map(r => r.id === currentReply.id ? currentReply : r));
-        } else {
-            setReplies([...replies, { ...currentReply, id: Date.now() }]);
+    useEffect(() => {
+        fetchReplies();
+    }, []);
+
+    const fetchReplies = async () => {
+        try {
+            const res = await fetch(`${config.API_URL}/api/quick-replies`);
+            const data = await res.json();
+            setReplies(data);
+        } catch (err) {
+            console.error("Erreur chargement réponses:", err);
+        } finally {
+            setLoading(false);
         }
-        setIsEditing(false);
-        setCurrentReply({ shortcut: '', text: '' });
     };
 
-    const deleteReply = (id) => {
-        setReplies(replies.filter(r => r.id !== id));
+    const handleSave = async (e) => {
+        e.preventDefault();
+        const url = currentReply.id
+            ? `${config.API_URL}/api/quick-replies/${currentReply.id}`
+            : `${config.API_URL}/api/quick-replies`;
+        const method = currentReply.id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentReply)
+            });
+            if (res.ok) {
+                fetchReplies();
+                setIsEditing(false);
+                setCurrentReply({ shortcut: '', text: '' });
+            }
+        } catch (err) {
+            console.error("Erreur sauvegarde:", err);
+        }
     };
 
-    const filtered = replies.filter(r => r.shortcut.includes(searchTerm) || r.text.includes(searchTerm));
+    const deleteReply = async (id) => {
+        if (!window.confirm("Supprimer cette réponse ?")) return;
+        try {
+            const res = await fetch(`${config.API_URL}/api/quick-replies/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                fetchReplies();
+            }
+        } catch (err) {
+            console.error("Erreur suppression:", err);
+        }
+    };
+
+    const filtered = (replies || []).filter(r =>
+        (r.shortcut || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.text || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>

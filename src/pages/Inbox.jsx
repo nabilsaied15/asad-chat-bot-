@@ -34,6 +34,8 @@ const InboxPage = () => {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [statusFilter, setStatusFilter] = useState('open'); // 'open' or 'deleted'
+    const [quickReplies, setQuickReplies] = useState([]);
+    const [showStatusMenu, setShowStatusMenu] = useState(false);
     const socketRef = useRef();
 
     useEffect(() => {
@@ -49,6 +51,7 @@ const InboxPage = () => {
         }
 
         fetchConversations();
+        fetchQuickReplies();
 
         // Connect to socket as agent
         socketRef.current = io(`${config.API_URL}`, {
@@ -78,6 +81,16 @@ const InboxPage = () => {
             }
         }
     }, [conversations, window.location.search]);
+
+    const fetchQuickReplies = async () => {
+        try {
+            const res = await fetch(`${config.API_URL}/api/quick-replies`);
+            const data = await res.json();
+            setQuickReplies(data);
+        } catch (err) {
+            console.error('Failed to fetch quick replies');
+        }
+    };
 
     const fetchConversations = async () => {
         try {
@@ -137,6 +150,47 @@ const InboxPage = () => {
         setMessages(prev => [...prev, { sender: 'agent', text: inputValue, timestamp: Date.now() }]);
         setInputValue('');
         fetchConversations(); // Update last message
+    };
+
+    const handleInputChange = (e) => {
+        const val = e.target.value;
+        setInputValue(val);
+
+        // Check for quick replies shortcuts (e.g., "/thanks ")
+        const match = val.match(/^\/(\w+)$/);
+        // We'll look for an exact match + a trailing space or enter in a more advanced way, 
+        // but for now, let's keep it simple: if the value matches a shortcut exactly, 
+        // and we have a corresponding reply, let's offer it or replace it.
+        // Actually, let's trigger it on space.
+        if (val.endsWith(' ')) {
+            const parts = val.trim().split(' ');
+            const lastWord = parts[parts.length - 1];
+            if (lastWord.startsWith('/')) {
+                const reply = quickReplies.find(r => r.shortcut === lastWord);
+                if (reply) {
+                    const newVal = val.replace(lastWord + ' ', reply.text + ' ');
+                    setInputValue(newVal);
+                }
+            }
+        }
+    };
+
+    const updateStatus = async (newStatus) => {
+        if (!selectedChat) return;
+        try {
+            const res = await fetch(`${config.API_URL}/api/conversations/${selectedChat.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                setSelectedChat(prev => ({ ...prev, status: newStatus }));
+                fetchConversations();
+                setShowStatusMenu(false);
+            }
+        } catch (err) {
+            console.error('Failed to update status');
+        }
     };
 
     const deleteConversation = async (id) => {
@@ -311,7 +365,36 @@ const InboxPage = () => {
                                                 {selectedChat.first_name ? `${selectedChat.first_name} ${selectedChat.last_name || ''}` : `Visitor ${selectedChat.visitor_id}`}
                                             </h3>
                                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '12px', color: '#10b981' }}>● {t?.inbox?.online || 'Online'}</span>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span
+                                                        onClick={() => setShowStatusMenu(!showStatusMenu)}
+                                                        style={{
+                                                            fontSize: '12px',
+                                                            backgroundColor: selectedChat.status === 'resolved' ? '#f0fdf4' : '#f0f9ff',
+                                                            color: selectedChat.status === 'resolved' ? '#16a34a' : '#0369a1',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            textTransform: 'uppercase'
+                                                        }}
+                                                    >
+                                                        ● {selectedChat.status || 'open'}
+                                                    </span>
+                                                    {showStatusMenu && (
+                                                        <div style={{ position: 'absolute', top: '100%', left: 0, backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '8px', zIndex: 100, padding: '8px', minWidth: '120px', marginTop: '4px' }}>
+                                                            {['open', 'resolved', 'pending'].map(s => (
+                                                                <div
+                                                                    key={s}
+                                                                    onClick={() => updateStatus(s)}
+                                                                    style={{ padding: '6px 12px', fontSize: '13px', color: '#374151', cursor: 'pointer', borderRadius: '4px', backgroundColor: selectedChat.status === s ? '#f3f4f6' : 'transparent', textTransform: 'capitalize' }}
+                                                                >
+                                                                    {s}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 {selectedChat.whatsapp && (
                                                     <span style={{ fontSize: '12px', color: '#6b7280' }}>📱 {selectedChat.whatsapp}</span>
                                                 )}
@@ -387,8 +470,8 @@ const InboxPage = () => {
                                         <input
                                             type="text"
                                             value={inputValue}
-                                            onChange={(e) => setInputValue(e.target.value)}
-                                            placeholder={statusFilter === 'deleted' ? "Inactif (Corbeille)" : t.inbox.placeholder}
+                                            onChange={handleInputChange}
+                                            placeholder={statusFilter === 'deleted' ? "Inactif (Corbeille)" : "Tapez votre message ou / pour un raccourci..."}
                                             disabled={statusFilter === 'deleted'}
                                             style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', backgroundColor: statusFilter === 'deleted' ? '#f3f4f6' : 'white' }}
                                         />
