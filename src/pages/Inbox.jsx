@@ -389,27 +389,55 @@ const InboxPage = () => {
                                                     <span
                                                         onClick={() => setShowStatusMenu(!showStatusMenu)}
                                                         style={{
-                                                            fontSize: '12px',
-                                                            backgroundColor: selectedChat.status === 'resolved' ? '#f0fdf4' : '#f0f9ff',
-                                                            color: selectedChat.status === 'resolved' ? '#16a34a' : '#0369a1',
-                                                            padding: '2px 8px',
-                                                            borderRadius: '4px',
+                                                            fontSize: '11px',
+                                                            backgroundColor: selectedChat.status === 'resolved' ? '#dcfce7' :
+                                                                selectedChat.status === 'pending' ? '#fef3c7' : '#dbeafe',
+                                                            color: selectedChat.status === 'resolved' ? '#166534' :
+                                                                selectedChat.status === 'pending' ? '#92400e' : '#1e40af',
+                                                            padding: '4px 10px',
+                                                            borderRadius: '20px',
                                                             fontWeight: '700',
                                                             cursor: 'pointer',
-                                                            textTransform: 'uppercase'
+                                                            textTransform: 'uppercase',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px'
                                                         }}
                                                     >
-                                                        ● {selectedChat.status || 'open'}
+                                                        <span style={{ fontSize: '8px' }}>●</span> {
+                                                            selectedChat.status === 'resolved' ? 'Résolu' :
+                                                                selectedChat.status === 'pending' ? 'En attente' : 'En cours'
+                                                        }
                                                     </span>
                                                     {showStatusMenu && (
-                                                        <div style={{ position: 'absolute', top: '100%', left: 0, backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '8px', zIndex: 100, padding: '8px', minWidth: '120px', marginTop: '4px' }}>
-                                                            {['open', 'resolved', 'pending'].map(s => (
+                                                        <div style={{ position: 'absolute', top: '100%', left: 0, backgroundColor: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderRadius: '12px', zIndex: 100, padding: '8px', minWidth: '150px', marginTop: '8px', border: '1px solid #e5e7eb' }}>
+                                                            {[
+                                                                { id: 'open', label: 'En cours', color: '#1e40af', bg: '#dbeafe' },
+                                                                { id: 'resolved', label: 'Résolu', color: '#166534', bg: '#dcfce7' },
+                                                                { id: 'pending', label: 'En attente', color: '#92400e', bg: '#fef3c7' }
+                                                            ].map(s => (
                                                                 <div
-                                                                    key={s}
-                                                                    onClick={() => updateStatus(s)}
-                                                                    style={{ padding: '6px 12px', fontSize: '13px', color: '#374151', cursor: 'pointer', borderRadius: '4px', backgroundColor: selectedChat.status === s ? '#f3f4f6' : 'transparent', textTransform: 'capitalize' }}
+                                                                    key={s.id}
+                                                                    onClick={() => {
+                                                                        updateStatus(s.id);
+                                                                        setShowStatusMenu(false);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '8px 12px',
+                                                                        fontSize: '13px',
+                                                                        color: '#374151',
+                                                                        cursor: 'pointer',
+                                                                        borderRadius: '8px',
+                                                                        backgroundColor: selectedChat.status === s.id ? '#f9fafb' : 'transparent',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '8px',
+                                                                        transition: 'all 0.2s'
+                                                                    }}
+                                                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                                                                    onMouseLeave={(e) => e.target.style.backgroundColor = selectedChat.status === s.id ? '#f9fafb' : 'transparent'}
                                                                 >
-                                                                    {s}
+                                                                    <span style={{ color: s.color }}>●</span> {s.label}
                                                                 </div>
                                                             ))}
                                                         </div>

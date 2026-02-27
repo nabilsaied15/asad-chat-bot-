@@ -189,15 +189,22 @@ const Archives = () => {
                                                         value={arch.status?.toLowerCase()}
                                                         onChange={(e) => handleStatusChange(arch.id, e.target.value)}
                                                         style={{
-                                                            padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: '600',
+                                                            padding: '6px 12px',
+                                                            borderRadius: '20px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
                                                             backgroundColor: statusStyle.bg,
                                                             color: statusStyle.text,
                                                             border: 'none',
                                                             cursor: 'pointer',
-                                                            outline: 'none'
+                                                            outline: 'none',
+                                                            textTransform: 'uppercase',
+                                                            appearance: 'none',
+                                                            textAlign: 'center',
+                                                            minWidth: '100px'
                                                         }}
                                                     >
-                                                        <option value="open">Ouvert</option>
+                                                        <option value="open">En cours</option>
                                                         <option value="resolved">Résolu</option>
                                                         <option value="pending">En attente</option>
                                                         <option value="abandoned">Abandonné</option>
