@@ -108,7 +108,11 @@ async function sendWhatsAppNotification(visitorId, text, targetPhone = null) {
 }
 
 app.get('/', (req, res) => {
-    res.send('asad.to Backend API is running correctly.');
+    res.send('asad.to Backend API is running correctly. Version 1.0.1');
+});
+
+app.get('/api/version', (req, res) => {
+    res.json({ version: '1.0.1', status: 'ready', database: db ? 'connected' : 'disconnected' });
 });
 
 const io = new Server(server, {
@@ -274,9 +278,10 @@ async function connectDB() {
             `);
             console.log('Table stats vérifiée/créée');
 
+            console.log('Migration Settings: Success (whatsapp_number VARCHAR(100))');
             console.log('Table settings vérifiée/créée');
         } catch (migErr) {
-            console.error('Erreur migration:', migErr.message);
+            console.error('CRITICAL Migration Error:', migErr.message);
         }
     } catch (err) {
         console.error('Erreur de connexion MySQL:', err);

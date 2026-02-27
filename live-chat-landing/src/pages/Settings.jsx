@@ -139,6 +139,7 @@ const Settings = () => {
             if (err instanceof SyntaxError) {
                 console.error("The server returned invalid JSON.");
             }
+            setStatus({ type: 'error', msg: "Impossible de récupérer les paramètres. Vérifiez votre connexion." });
         } finally {
             setLoading(false);
         }
@@ -850,6 +851,21 @@ const Settings = () => {
                                         )}
                                     </AnimatePresence>
                                 )}
+                                {/* Version Footer */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '24px',
+                                    right: '48px',
+                                    fontSize: '11px',
+                                    color: COLORS.gray,
+                                    fontWeight: '700',
+                                    opacity: 0.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <Shield size={10} /> v1.0.1 - Système asad.to protégé
+                                </div>
                             </div>
                         </div>
                     </div>
