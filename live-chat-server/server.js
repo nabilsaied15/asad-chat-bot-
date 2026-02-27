@@ -167,10 +167,27 @@ app.get('/api/debug/force-repair-db', async (req, res) => {
                 welcome_message TEXT,
                 email_notifications BOOLEAN DEFAULT TRUE,
                 whatsapp_notifications BOOLEAN DEFAULT FALSE,
-                whatsapp_number VARCHAR(100)
+                whatsapp_number VARCHAR(100),
+                brevo_api_key VARCHAR(255),
+                callmebot_api_key VARCHAR(255)
             )
         `);
-        res.json({ status: 'ok', message: 'Table settings réparée/créée avec succès' });
+
+        // S'assurer que les colonnes existent si la table existait déjà
+        try {
+            const [columns] = await db.execute('SHOW COLUMNS FROM settings');
+            const columnNames = columns.map(c => c.Field);
+            if (!columnNames.includes('brevo_api_key')) {
+                await db.execute('ALTER TABLE settings ADD COLUMN brevo_api_key VARCHAR(255)');
+            }
+            if (!columnNames.includes('callmebot_api_key')) {
+                await db.execute('ALTER TABLE settings ADD COLUMN callmebot_api_key VARCHAR(255)');
+            }
+        } catch (colErr) {
+            console.error('Erreur forcée colonnes:', colErr.message);
+        }
+
+        res.json({ status: 'ok', message: 'Table settings réparée et mise à jour avec les colonnes API' });
     } catch (err) {
         res.status(500).json({ error: err.message, code: err.code });
     }
