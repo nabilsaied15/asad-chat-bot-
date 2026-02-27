@@ -189,7 +189,9 @@ const Settings = () => {
                 let errorMsg = 'Erreur lors de la sauvegarde.';
                 try {
                     const data = await response.json();
-                    if (data.error) errorMsg = data.error;
+                    if (data.error) {
+                        errorMsg = `${data.error} ${data.code ? `(${data.code})` : ''}: ${data.details || ''}`;
+                    }
                 } catch (e) {
                     console.error("Non-JSON error response received");
                 }
@@ -866,6 +868,25 @@ const Settings = () => {
                                 }}>
                                     <Shield size={10} /> v1.0.1 - Système asad.to protégé
                                 </div>
+
+                                {status.type === 'error' && (
+                                    <div style={{
+                                        marginTop: '40px',
+                                        padding: '16px',
+                                        backgroundColor: '#fff1f2',
+                                        border: '1px solid #fda4af',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        color: '#991b1b',
+                                        fontFamily: 'monospace',
+                                        wordBreak: 'break-all'
+                                    }}>
+                                        <strong>DEBUG INFO:</strong><br />
+                                        User ID: {user.id}<br />
+                                        API URL: {config.API_URL}<br />
+                                        Last Error: {status.msg}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

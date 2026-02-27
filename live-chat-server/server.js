@@ -115,6 +115,24 @@ app.get('/api/version', (req, res) => {
     res.json({ version: '1.0.1', status: 'ready', database: db ? 'connected' : 'disconnected' });
 });
 
+app.get('/api/debug/db-check', async (req, res) => {
+    try {
+        const [tables] = await db.execute('SHOW TABLES');
+        const [settingsSchema] = await db.execute('DESCRIBE settings');
+        res.json({
+            status: 'ok',
+            tables: tables.map(t => Object.values(t)[0]),
+            settings_schema: settingsSchema,
+            env: {
+                DB_HOST: process.env.DB_HOST ? 'Configured' : 'Missing',
+                DB_NAME: process.env.DB_NAME
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message, code: err.code });
+    }
+});
+
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -769,7 +787,12 @@ app.post('/api/settings/:userId', async (req, res) => {
         res.json({ success: true, message: 'Paramètres enregistrés' });
     } catch (err) {
         console.error(`[Settings] Erreur lors de la sauvegarde pour l'utilisateur ${userId}:`, err.message);
-        res.status(500).json({ error: 'Erreur base de données : ' + err.message });
+        res.status(500).json({
+            error: 'Erreur base de données',
+            details: err.message,
+            code: err.code,
+            sql: err.sql // Only for debugging, remove later if needed
+        });
     }
 });
 
