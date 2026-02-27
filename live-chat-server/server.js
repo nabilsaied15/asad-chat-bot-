@@ -36,9 +36,10 @@ transporter.verify((error, success) => {
 });
 console.log(`[Notifications] Nodemailer: ${process.env.SMTP_HOST || 'smtp.gmail.com'}:${process.env.SMTP_PORT || 587}`);
 
-async function sendNotificationEmail(visitorId, text, targetEmail = null, customApiKey = null) {
+async function sendNotificationEmail(visitorId, text, targetEmail = null, customApiKey = null, senderEmail = null) {
     const BREVO_API_KEY = customApiKey || process.env.BREVO_API_KEY;
     const NOTIF_EMAIL = targetEmail || process.env.NOTIFICATION_EMAIL;
+    const SENDER_EMAIL = senderEmail || NOTIF_EMAIL || "nabilsaied04@gmail.com";
 
     if (!BREVO_API_KEY) {
         console.log("[Notifications] BREVO_API_KEY non configurée. Tentative SMTP...");
@@ -58,7 +59,7 @@ async function sendNotificationEmail(visitorId, text, targetEmail = null, custom
     // Envoi via API Brevo (HTTP) - Passe à travers les blocages Render
     const https = require('https');
     const data = JSON.stringify({
-        sender: { name: "asad.to", email: "notif@asad.to" },
+        sender: { name: "asad.to", email: SENDER_EMAIL },
         to: [{ email: NOTIF_EMAIL || "nabilsaied04@gmail.com" }],
         subject: "Vous avez un nouveau message sur le site",
         htmlContent: `
@@ -432,7 +433,7 @@ app.get('/api/stats/test-email', async (req, res) => {
         try {
             const https = require('https');
             const data = JSON.stringify({
-                sender: { name: "asad.to Test", email: "test@asad.to" },
+                sender: { name: "asad.to Test", email: testTarget },
                 to: [{ email: testTarget }],
                 subject: "Test Diagnostic Brevo asad.to",
                 htmlContent: `<h2>Succès !</h2><p>L'API Brevo est bien configurée sur votre serveur Render.</p>`
@@ -869,7 +870,7 @@ app.post('/api/settings/:userId/test-notifications', async (req, res) => {
         if (type === 'email') {
             const [user] = await db.execute('SELECT email FROM users WHERE id = ?', [userId]);
             const email = user[0]?.email || process.env.NOTIFICATION_EMAIL;
-            await sendNotificationEmail("TEST_SYSTEM", "Ceci est un test de notification par email asad.to", email, settings.brevo_api_key);
+            await sendNotificationEmail("TEST_SYSTEM", "Ceci est un test de notification par email asad.to", email, settings.brevo_api_key, email);
             res.json({ success: true, message: `Email de test envoyé à ${email}${settings.brevo_api_key ? ' (via votre clé personnalisée)' : ''}` });
         } else if (type === 'whatsapp') {
             const number = settings.whatsapp_number || process.env.WHATSAPP_NUMBER;
@@ -1033,7 +1034,7 @@ io.on('connection', (socket) => {
                             const agentEmail = agentProfile.length > 0 ? agentProfile[0].email : process.env.SMTP_USER;
 
                             if (email_notifications) {
-                                sendNotificationEmail(visitor.visitorId, data.text, agentEmail, agentSettings[0].brevo_api_key);
+                                sendNotificationEmail(visitor.visitorId, data.text, agentEmail, agentSettings[0].brevo_api_key, agentEmail);
                             }
                             if (whatsapp_notifications && whatsapp_number) {
                                 sendWhatsAppNotification(visitor.visitorId, data.text, whatsapp_number, agentSettings[0].callmebot_api_key);
