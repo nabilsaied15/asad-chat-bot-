@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LogOut, User, Bell, ChevronDown, X, Mail, Save, MessageSquare, Settings } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import io from 'socket.io-client';
 import config from '../config';
+
 
 const DashboardNavbar = () => {
     const navigate = useNavigate();
@@ -12,6 +14,8 @@ const DashboardNavbar = () => {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [totalUnread, setTotalUnread] = useState(0);
+    const socketRef = useRef();
+
 
     // Form state (used in the quick-edit modal)
     const [name, setName] = useState(user.name || '');
@@ -36,8 +40,49 @@ const DashboardNavbar = () => {
         syncUser();
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 10000); // Check every 10s
-        return () => clearInterval(interval);
+
+        // Demande de permission pour les notifications du navigateur
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+
+        // Connexion socket globale pour le statut en ligne et les notifications
+        socketRef.current = io(`${config.API_URL}`, {
+            transports: ['polling', 'websocket']
+        });
+
+        socketRef.current.emit('register_agent', { agentId: user.id });
+
+        socketRef.current.on('visitor_message', (data) => {
+            fetchNotifications();
+
+            // Déclencher la notification du navigateur SI AUTORISÉ ET NON MUET
+            if (Notification.permission === 'granted' && !data.fromBot && !data.isMuted) {
+                const notif = new Notification(`Nouveau message sur asad.to`, {
+                    body: data.text,
+                    icon: '/favicon.ico',
+                    requireInteraction: true // Force la notification à rester à l'écran
+                });
+
+                notif.onclick = function () {
+                    window.focus();
+                    if (window.location.pathname !== '/inbox') {
+                        navigate('/inbox?visitorId=' + data.visitorId);
+                    }
+                    this.close();
+                };
+
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+                audio.play().catch(() => { });
+            }
+        });
+
+        return () => {
+            clearInterval(interval);
+            if (socketRef.current) socketRef.current.disconnect();
+        };
     }, []);
+
 
     useEffect(() => {
         if (totalUnread > 0) {

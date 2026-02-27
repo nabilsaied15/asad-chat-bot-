@@ -28,9 +28,12 @@ const Login = () => {
                 setError(data.error || 'Erreur de connexion');
             }
         } catch (err) {
-            setError('Erreur serveur');
+            setError('Erreur de connexion au serveur.');
         }
     };
+
+    const isDbError = error && error.includes('ENOTFOUND');
+    const isCredentialsError = error === 'Identifiants invalides';
 
     return (
         <div style={{
@@ -62,7 +65,31 @@ const Login = () => {
                 <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', textAlign: 'center' }}>{t.auth.signIn}</h1>
                 <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '32px' }}>{t.auth.enterDetails}</p>
 
-                {error && <div style={{ color: '#ef4444', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', textAlign: 'center' }}>{error}</div>}
+                {error && (
+                    <div style={{
+                        color: isDbError ? '#9a3412' : '#ef4444',
+                        backgroundColor: isDbError ? '#fff7ed' : '#fef2f2',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        marginBottom: '24px',
+                        fontSize: '14px',
+                        border: `1px solid ${isDbError ? '#fdba74' : '#fda4af'}`,
+                        textAlign: 'left'
+                    }}>
+                        {isDbError ? (
+                            <>
+                                <strong style={{ display: 'block', marginBottom: '8px' }}>⚠️ Problème de connexion (Base de données)</strong>
+                                <p style={{ fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
+                                    Le serveur n'arrive pas à trouver l'adresse de votre base de données Aiven.
+                                    <br /><br />
+                                    <strong>Vérifiez sur Render :</strong> La variable <code>DB_HOST</code> contient probablement un espace en trop ou une erreur de frappe.
+                                </p>
+                            </>
+                        ) : (
+                            error
+                        )}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '20px' }}>

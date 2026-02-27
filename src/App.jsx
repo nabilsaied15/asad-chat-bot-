@@ -13,6 +13,11 @@ import Monitoring from './pages/Monitoring';
 import Personnel from './pages/Personnel';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import QuickReplies from './pages/QuickReplies';
+import ChatbotConfig from './pages/ChatbotConfig';
+import Archives from './pages/Archives';
+import Contacts from './pages/Contacts';
+
 
 const PrivateRoute = ({ children }) => {
   const user = localStorage.getItem('user');
@@ -56,6 +61,11 @@ function App() {
             <Route path="/personnel" element={<PrivateRoute><Personnel /></PrivateRoute>} />
             <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            <Route path="/quick-replies" element={<PrivateRoute><QuickReplies /></PrivateRoute>} />
+            <Route path="/chatbot" element={<PrivateRoute><ChatbotConfig /></PrivateRoute>} />
+            <Route path="/archives" element={<PrivateRoute><Archives /></PrivateRoute>} />
+            <Route path="/contacts" element={<PrivateRoute><Contacts /></PrivateRoute>} />
+
 
             {/* Catch all redirect to home or login */}
             <Route path="*" element={<Navigate to="/" />} />

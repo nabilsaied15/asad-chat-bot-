@@ -109,8 +109,9 @@ const Settings = () => {
         email_notifications: true,
         whatsapp_notifications: false,
         whatsapp_number: '',
-        brevo_api_key: '',
+        gmail_app_password: '',
         callmebot_api_key: ''
+
     });
 
 
@@ -134,8 +135,9 @@ const Settings = () => {
                     email_notifications: !!data.email_notifications,
                     whatsapp_notifications: !!data.whatsapp_notifications,
                     whatsapp_number: data.whatsapp_number || '',
-                    brevo_api_key: data.brevo_api_key || '',
+                    gmail_app_password: data.gmail_app_password || '',
                     callmebot_api_key: data.callmebot_api_key || ''
+
                 });
 
             }
@@ -728,13 +730,14 @@ const Settings = () => {
                                                                         <div style={{ fontSize: '17px', fontWeight: '800', color: COLORS.secondary }}>{item.label}</div>
                                                                         <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
                                                                         <a
-                                                                            href={item.id === 'email' ? "https://app.brevo.com/settings/keys/api" : "https://www.callmebot.com/blog/free-api-whatsapp-messages/"}
+                                                                            href={item.id === 'email' ? "https://myaccount.google.com/apppasswords" : "https://www.callmebot.com/blog/free-api-whatsapp-messages/"}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
                                                                             style={{ fontSize: '11px', color: COLORS.primary, fontWeight: '700', textDecoration: 'none', display: 'block', marginTop: '4px' }}
                                                                         >
-                                                                            Ouvrir la doc : Où trouver ma clé API ?
+                                                                            {item.id === 'email' ? "Ouvrir Google : Créer un mot de passe d'application" : "Ouvrir la doc : Où trouver ma clé API ?"}
                                                                         </a>
+
                                                                     </div>
 
                                                                 </div>
@@ -785,15 +788,24 @@ const Settings = () => {
                                                                     style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
                                                                 >
                                                                     <InputField
-                                                                        label="Clé API Brevo"
-                                                                        placeholder="xkeysib-..."
-                                                                        value={settings.brevo_api_key}
-                                                                        onChange={(e) => setSettings({ ...settings, brevo_api_key: e.target.value })}
+                                                                        label="Mot de passe d'application Gmail (16 lettres sans espaces)"
+                                                                        placeholder="abcd efgh ijkl mnop"
+                                                                        type="password"
+                                                                        value={settings.gmail_app_password}
+                                                                        onChange={(e) => setSettings({ ...settings, gmail_app_password: e.target.value })}
                                                                         icon={Zap}
-                                                                        desc="Nécessaire pour envoyer des emails depuis Render.com gratuitement."
+                                                                        desc="Indispensable pour éviter que Google bloque l'envoi."
                                                                     />
+                                                                    <div style={{ fontSize: '12px', color: COLORS.gray, marginTop: '12px', fontWeight: '500', backgroundColor: '#f0fdf4', padding: '10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                                                                        <strong>Comment l'obtenir (très simple) :</strong><br />
+                                                                        1. Cliquez sur le lien "Ouvrir Google" ci-dessus.<br />
+                                                                        2. Connectez-vous avec votre compte (<code>nabilsaieddev@gmail.com</code>).<br />
+                                                                        3. Entrez un nom (ex: "asad.to Chat") et cliquez sur Créer.<br />
+                                                                        4. Copiez le mot de passe de 16 lettres généré et collez-le ici.<br />
+                                                                    </div>
                                                                 </motion.div>
                                                             )}
+
 
 
                                                             {item.id === 'whatsapp' && item.value && (

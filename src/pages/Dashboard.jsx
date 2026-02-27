@@ -2,6 +2,8 @@ import React from 'react';
 import DashboardNavbar from '../components/DashboardNavbar';
 import { MessageSquare, Layout, Activity, Users, Monitor, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import LeftNav from '../components/LeftNav';
+
 
 const Dashboard = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -27,20 +29,10 @@ const Dashboard = () => {
             <DashboardNavbar />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', backgroundColor: '#f9fafb' }}>
-                {/* Left Rail (Navigation) */}
-                <nav style={{ width: '64px', backgroundColor: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: '20px', zIndex: 10 }}>
-                    {user.role === 'admin' && (
-                        <>
-                            <div onClick={() => navigate('/dashboard')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px' }} title="Dashboard"><Monitor size={24} /></div>
-                            <div onClick={() => navigate('/monitoring')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Monitoring"><Users size={24} /></div>
-                            <div onClick={() => navigate('/reports')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Reports"><Activity size={24} /></div>
-                            <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
-                        </>
-                    )}
-                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Inbox"><MessageSquare size={24} /></div>
-                </nav>
+                <LeftNav activePage="/dashboard" />
 
                 <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+
                     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                         <header style={{ marginBottom: '40px' }}>
                             <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>Welcome back, {user.name}!</h1>

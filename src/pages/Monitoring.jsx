@@ -3,6 +3,7 @@ import { Users, Globe, Clock, Monitor, MessageCircle, ExternalLink, Shield, Acti
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import DashboardNavbar from '../components/DashboardNavbar';
+import LeftNav from '../components/LeftNav';
 import config from '../config';
 
 const MonitoringPage = () => {
@@ -39,18 +40,7 @@ const MonitoringPage = () => {
             <DashboardNavbar />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Left Rail (Navigation) */}
-                <nav style={{ width: '64px', backgroundColor: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: '20px', zIndex: 10 }}>
-                    {JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' && (
-                        <>
-                            <div onClick={() => navigate('/dashboard')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Dashboard"><Monitor size={24} /></div>
-                            <div onClick={() => navigate('/monitoring')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px' }} title="Monitoring"><Users size={24} /></div>
-                            <div onClick={() => navigate('/reports')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Reports"><Activity size={24} /></div>
-                            <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
-                        </>
-                    )}
-                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Inbox"><MessageCircle size={24} /></div>
-                </nav>
+                <LeftNav activePage="/monitoring" />
 
                 {/* Main Content */}
                 <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

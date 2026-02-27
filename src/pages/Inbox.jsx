@@ -22,7 +22,9 @@ import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import DashboardNavbar from '../components/DashboardNavbar';
+import LeftNav from '../components/LeftNav';
 import config from '../config';
+
 
 const InboxPage = () => {
     const { t } = useLanguage();
@@ -56,17 +58,6 @@ const InboxPage = () => {
 
         socketRef.current.on('visitor_message', (data) => {
             fetchConversations();
-
-            // Trigger Browser Notification ONLY IF NOT MUTED
-            if (Notification.permission === 'granted' && !data.fromBot && !data.isMuted) {
-                new Notification(`Nouveau message asad.to`, {
-                    body: data.text,
-                    icon: '/favicon.ico'
-                });
-
-                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-                audio.play().catch(() => { });
-            }
 
             if (selectedChat && selectedChat.visitor_id === data.visitorId) {
                 setMessages(prev => [...prev, { sender: 'visitor', text: data.text, timestamp: Date.now() }]);
@@ -193,21 +184,30 @@ const InboxPage = () => {
             <DashboardNavbar />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
-                {/* Left Rail (Navigation) */}
-                <nav style={{ width: '64px', backgroundColor: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', gap: '20px', zIndex: 10 }}>
-                    {JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' && (
-                        <>
-                            <div onClick={() => navigate('/dashboard')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Dashboard"><Monitor size={24} /></div>
-                            <div onClick={() => navigate('/monitoring')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Monitoring"><Users size={24} /></div>
-                            <div onClick={() => navigate('/reports')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Reports"><Activity size={24} /></div>
-                            <div onClick={() => navigate('/personnel')} style={{ color: 'white', opacity: 0.6, cursor: 'pointer' }} title="Personnel"><Shield size={24} /></div>
-                        </>
-                    )}
-                    <div onClick={() => navigate('/inbox')} style={{ color: 'white', opacity: 1, cursor: 'pointer', borderLeft: '3px solid #00b06b', paddingLeft: '11px', marginLeft: '-11px', marginBottom: '10px' }} title="Inbox"><MessageSquare size={24} /></div>
-                    <div onClick={() => { setStatusFilter(prev => prev === 'deleted' ? 'open' : 'deleted'); setSelectedChat(null); }} style={{ color: 'white', opacity: statusFilter === 'deleted' ? 1 : 0.6, cursor: 'pointer', borderLeft: statusFilter === 'deleted' ? '3px solid #ef4444' : 'none', paddingLeft: statusFilter === 'deleted' ? '11px' : '0', marginLeft: statusFilter === 'deleted' ? '-11px' : '0' }} title="Trash (Corbeille)"><Trash2 size={24} /></div>
-                </nav>
+                <LeftNav
+                    activePage="/inbox"
+                    bottomSection={
+                        <div
+                            onClick={() => { setStatusFilter(prev => prev === 'deleted' ? 'open' : 'deleted'); setSelectedChat(null); }}
+                            style={{
+                                color: 'white',
+                                opacity: statusFilter === 'deleted' ? 1 : 0.6,
+                                cursor: 'pointer',
+                                borderLeft: statusFilter === 'deleted' ? '3px solid #ef4444' : 'none',
+                                paddingLeft: statusFilter === 'deleted' ? '11px' : '0',
+                                marginLeft: statusFilter === 'deleted' ? '-11px' : '0',
+                                display: 'flex',
+                                justifyContent: 'center'
+                            }}
+                            title="Trash (Corbeille)"
+                        >
+                            <Trash2 size={24} />
+                        </div>
+                    }
+                />
 
                 {/* List Sidebar */}
+
                 <aside style={{ width: '320px', backgroundColor: 'white', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{t.inbox.title}</h2>
