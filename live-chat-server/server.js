@@ -36,9 +36,9 @@ transporter.verify((error, success) => {
 });
 console.log(`[Notifications] Nodemailer: ${process.env.SMTP_HOST || 'smtp.gmail.com'}:${process.env.SMTP_PORT || 587}`);
 
-async function sendNotificationEmail(visitorId, text) {
+async function sendNotificationEmail(visitorId, text, targetEmail = null) {
     const BREVO_API_KEY = process.env.BREVO_API_KEY;
-    const NOTIF_EMAIL = process.env.NOTIFICATION_EMAIL;
+    const NOTIF_EMAIL = targetEmail || process.env.NOTIFICATION_EMAIL;
 
     if (!BREVO_API_KEY) {
         console.log("[Notifications] BREVO_API_KEY non configurée. Tentative SMTP...");
@@ -93,8 +93,8 @@ async function sendNotificationEmail(visitorId, text) {
     req.end();
 }
 
-async function sendWhatsAppNotification(visitorId, text) {
-    const number = process.env.WHATSAPP_NUMBER;
+async function sendWhatsAppNotification(visitorId, text, targetPhone = null) {
+    const number = targetPhone || process.env.WHATSAPP_NUMBER;
     if (!number || number === '33600000000') {
         console.log("[Notifications] WhatsApp non configuré (numéro manquant).");
         return;
@@ -245,11 +245,36 @@ async function connectDB() {
                     welcome_message TEXT,
                     email_notifications BOOLEAN DEFAULT TRUE,
                     whatsapp_notifications BOOLEAN DEFAULT FALSE,
+                    whatsapp_number VARCHAR(100),
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             `);
-            console.log('Table settings vérifiée/créée');
+            try {
+                const [settingsColumns] = await db.execute('SHOW COLUMNS FROM settings');
+                const settingsColumnNames = settingsColumns.map(c => c.Field);
+                if (!settingsColumnNames.includes('whatsapp_number')) {
+                    await db.execute('ALTER TABLE settings ADD COLUMN whatsapp_number VARCHAR(100)');
+                    console.log('Migration: Colonne whatsapp_number ajoutée à settings');
+                } else {
+                    // Mettre à jour la longueur si déjà présente (pour être sûr)
+                    await db.execute('ALTER TABLE settings MODIFY COLUMN whatsapp_number VARCHAR(100)');
+                }
+            } catch (setErr) {
+                console.error('Erreur migration settings columns:', setErr.message);
+            }
 
+            // Migration Stats (Ensure it exists for the summary page)
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS stats (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    event_type VARCHAR(50) NOT NULL,
+                    visitor_id VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('Table stats vérifiée/créée');
+
+            console.log('Table settings vérifiée/créée');
         } catch (migErr) {
             console.error('Erreur migration:', migErr.message);
         }
@@ -684,7 +709,8 @@ app.get('/api/settings/:userId', async (req, res) => {
                 primary_color: '#00b06b',
                 welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?',
                 email_notifications: 1,
-                whatsapp_notifications: 0
+                whatsapp_notifications: 0,
+                whatsapp_number: ''
             });
         }
         res.json(rows[0]);
@@ -716,21 +742,29 @@ app.get('/api/public/settings/:siteKey', async (req, res) => {
 });
 
 app.post('/api/settings/:userId', async (req, res) => {
-    const { primary_color, welcome_message, email_notifications, whatsapp_notifications } = req.body;
-    const userId = req.params.userId;
+    const { primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number } = req.body;
+    const userId = parseInt(req.params.userId);
+    console.log(`[Settings] Save request for user ${userId}:`, req.body);
+
+    if (isNaN(userId)) {
+        return res.status(400).json({ error: 'ID utilisateur invalide' });
+    }
+
     try {
         await db.execute(`
-            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO settings (user_id, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             primary_color = VALUES(primary_color),
             welcome_message = VALUES(welcome_message),
             email_notifications = VALUES(email_notifications),
-            whatsapp_notifications = VALUES(whatsapp_notifications)
-        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications]);
+            whatsapp_notifications = VALUES(whatsapp_notifications),
+            whatsapp_number = VALUES(whatsapp_number)
+        `, [userId, primary_color, welcome_message, email_notifications, whatsapp_notifications, whatsapp_number]);
         res.json({ success: true, message: 'Paramètres enregistrés' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`[Settings] Erreur lors de la sauvegarde pour l'utilisateur ${userId}:`, err.message);
+        res.status(500).json({ error: 'Erreur base de données : ' + err.message });
     }
 });
 
@@ -865,9 +899,29 @@ io.on('connection', (socket) => {
                 io.to('agents_room').emit('visitor_list', Object.values(onlineVisitors));
                 io.to('agents_room').emit('visitor_message', { visitorId: visitor.visitorId, text: data.text, timestamp: Date.now(), isMuted });
 
-                if (!isMuted) {
-                    sendNotificationEmail(visitor.visitorId, data.text);
-                    sendWhatsAppNotification(visitor.visitorId, data.text);
+                if (socket.conversationId) {
+                    const [convDetails] = await db.execute('SELECT agent_id FROM conversations WHERE id = ?', [socket.conversationId]);
+                    if (convDetails.length > 0 && convDetails[0].agent_id) {
+                        const agentId = convDetails[0].agent_id;
+                        const [agentSettings] = await db.execute('SELECT email_notifications, whatsapp_notifications, whatsapp_number FROM settings WHERE user_id = ?', [agentId]);
+                        const [agentProfile] = await db.execute('SELECT email FROM users WHERE id = ?', [agentId]);
+
+                        if (agentSettings.length > 0) {
+                            const { email_notifications, whatsapp_notifications, whatsapp_number } = agentSettings[0];
+                            const agentEmail = agentProfile.length > 0 ? agentProfile[0].email : process.env.SMTP_USER;
+
+                            if (email_notifications) {
+                                sendNotificationEmail(visitor.visitorId, data.text, agentEmail);
+                            }
+                            if (whatsapp_notifications && whatsapp_number) {
+                                sendWhatsAppNotification(visitor.visitorId, data.text, whatsapp_number);
+                            }
+                        }
+                    } else if (!isMuted) {
+                        // Fallback logic if no agent assigned yet
+                        sendNotificationEmail(visitor.visitorId, data.text);
+                        sendWhatsAppNotification(visitor.visitorId, data.text);
+                    }
                 }
 
                 handleBotAction(visitor.visitorId, data.text, socket.conversationId);

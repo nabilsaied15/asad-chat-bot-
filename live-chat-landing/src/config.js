@@ -6,7 +6,7 @@ const config = {
     // Si nous sommes sur un domaine de production (pas localhost), on utilise l'URL du backend distant
     API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:3000'
-        : 'https://asad-chat-server.onrender.com',
+        : 'https://asad-chat-server.onrender.com', // Correct live URL from render.yaml
 };
 
 export default config;

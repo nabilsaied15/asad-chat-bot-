@@ -43,6 +43,50 @@ const COLORS = {
     glass: 'rgba(255, 255, 255, 0.7)'
 };
 
+const SectionHeader = ({ title, subtitle }) => (
+    <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '900', color: COLORS.secondary, letterSpacing: '-0.02em', marginBottom: '8px' }}>{title}</h2>
+        <p style={{ color: COLORS.gray, fontSize: '15px' }}>{subtitle}</p>
+    </div>
+);
+
+const InputField = ({ label, value, onChange, type = 'text', placeholder, icon: Icon, desc }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <label style={{ fontSize: '14px', fontWeight: '700', color: COLORS.secondary, marginLeft: '4px' }}>{label}</label>
+        <div style={{ position: 'relative' }}>
+            {Icon && <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: COLORS.gray }} />}
+            <input
+                type={type}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                style={{
+                    width: '100%',
+                    padding: Icon ? '14px 16px 14px 48px' : '14px 16px',
+                    borderRadius: '16px',
+                    border: '1px solid #eef2f6',
+                    backgroundColor: COLORS.lightGray,
+                    outline: 'none',
+                    fontSize: '15px',
+                    transition: 'all 0.2s',
+                    fontWeight: '500'
+                }}
+                onFocus={(e) => {
+                    e.target.style.borderColor = COLORS.primary;
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.boxShadow = `0 0 0 4px ${COLORS.primary}10`;
+                }}
+                onBlur={(e) => {
+                    e.target.style.borderColor = '#eef2f6';
+                    e.target.style.backgroundColor = COLORS.lightGray;
+                    e.target.style.boxShadow = 'none';
+                }}
+            />
+        </div>
+        {desc && <p style={{ fontSize: '12px', color: COLORS.gray, marginLeft: '4px', marginTop: '4px', fontWeight: '500' }}>{desc}</p>}
+    </div>
+);
+
 const Settings = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -63,7 +107,8 @@ const Settings = () => {
         primary_color: '#00b06b',
         welcome_message: 'Bonjour ! Comment pouvons-nous vous aider ?',
         email_notifications: true,
-        whatsapp_notifications: false
+        whatsapp_notifications: false,
+        whatsapp_number: ''
     });
 
     useEffect(() => {
@@ -84,11 +129,16 @@ const Settings = () => {
                 setSettings({
                     ...data,
                     email_notifications: !!data.email_notifications,
-                    whatsapp_notifications: !!data.whatsapp_notifications
+                    whatsapp_notifications: !!data.whatsapp_notifications,
+                    whatsapp_number: data.whatsapp_number || ''
                 });
             }
         } catch (err) {
             console.error("Error fetching settings:", err);
+            // Handle cases where the backend might return non-JSON content
+            if (err instanceof SyntaxError) {
+                console.error("The server returned invalid JSON.");
+            }
         } finally {
             setLoading(false);
         }
@@ -135,12 +185,19 @@ const Settings = () => {
             if (response.ok) {
                 setStatus({ type: 'success', msg: 'Paramètres sauvegardés !' });
             } else {
-                setStatus({ type: 'error', msg: 'Erreur lors de la sauvegarde.' });
+                let errorMsg = 'Erreur lors de la sauvegarde.';
+                try {
+                    const data = await response.json();
+                    if (data.error) errorMsg = data.error;
+                } catch (e) {
+                    console.error("Non-JSON error response received");
+                }
+                setStatus({ type: 'error', msg: errorMsg });
             }
         } catch (err) {
-            setStatus({ type: 'error', msg: 'Erreur réseau.' });
+            setStatus({ type: 'error', msg: 'Erreur réseau : ' + err.message });
         }
-        setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
+        setTimeout(() => setStatus({ type: '', msg: '' }), 5000);
     };
 
     const handlePasswordChange = async (e) => {
@@ -184,49 +241,6 @@ const Settings = () => {
         { id: 'security', label: 'Sécurité', icon: Shield, desc: 'Mot de passe et authentification' },
         { id: 'integration', label: 'Intégration', icon: LinkIcon, desc: 'WordPress et API Keys' },
     ];
-
-    const SectionHeader = ({ title, subtitle }) => (
-        <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', color: COLORS.secondary, letterSpacing: '-0.02em', marginBottom: '8px' }}>{title}</h2>
-            <p style={{ color: COLORS.gray, fontSize: '15px' }}>{subtitle}</p>
-        </div>
-    );
-
-    const InputField = ({ label, value, onChange, type = 'text', placeholder, icon: Icon }) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '700', color: COLORS.secondary, marginLeft: '4px' }}>{label}</label>
-            <div style={{ position: 'relative' }}>
-                {Icon && <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: COLORS.gray }} />}
-                <input
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    style={{
-                        width: '100%',
-                        padding: Icon ? '14px 16px 14px 48px' : '14px 16px',
-                        borderRadius: '16px',
-                        border: '1px solid #eef2f6',
-                        backgroundColor: COLORS.lightGray,
-                        outline: 'none',
-                        fontSize: '15px',
-                        transition: 'all 0.2s',
-                        fontWeight: '500'
-                    }}
-                    onFocus={(e) => {
-                        e.target.style.borderColor = COLORS.primary;
-                        e.target.style.backgroundColor = 'white';
-                        e.target.style.boxShadow = `0 0 0 4px ${COLORS.primary}10`;
-                    }}
-                    onBlur={(e) => {
-                        e.target.style.borderColor = '#eef2f6';
-                        e.target.style.backgroundColor = COLORS.lightGray;
-                        e.target.style.boxShadow = 'none';
-                    }}
-                />
-            </div>
-        </div>
-    );
 
     return (
         <div style={{
@@ -668,41 +682,63 @@ const Settings = () => {
                                                             whileHover={{ scale: 1.01 }}
                                                             style={{
                                                                 display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
+                                                                flexDirection: 'column',
+                                                                gap: '16px',
                                                                 padding: '24px',
                                                                 borderRadius: '24px',
                                                                 backgroundColor: '#f8fafc',
                                                                 border: '1px solid #eef2f6'
                                                             }}
                                                         >
-                                                            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                                                                <div style={{ width: '48px', height: '48px', backgroundColor: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.gray, border: '1px solid #eef2f6' }}>
-                                                                    <item.icon size={22} />
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                                                    <div style={{ width: '48px', height: '48px', backgroundColor: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.gray, border: '1px solid #eef2f6' }}>
+                                                                        <item.icon size={22} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ fontSize: '17px', fontWeight: '800', color: COLORS.secondary }}>{item.label}</div>
+                                                                        <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <div style={{ fontSize: '17px', fontWeight: '800', color: COLORS.secondary }}>{item.label}</div>
-                                                                    <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: '500', marginTop: '2px' }}>{item.sub}</div>
+                                                                <div
+                                                                    onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
+                                                                    style={{
+                                                                        width: '56px',
+                                                                        height: '30px',
+                                                                        backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
+                                                                        borderRadius: '20px',
+                                                                        position: 'relative',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'background 0.3s'
+                                                                    }}
+                                                                >
+                                                                    <motion.div
+                                                                        animate={{ x: item.value ? 28 : 2 }}
+                                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                                        style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                                                    />
                                                                 </div>
                                                             </div>
-                                                            <div
-                                                                onClick={() => setSettings({ ...settings, [item.key]: !item.value })}
-                                                                style={{
-                                                                    width: '56px',
-                                                                    height: '30px',
-                                                                    backgroundColor: item.value ? COLORS.primary : '#e5e7eb',
-                                                                    borderRadius: '20px',
-                                                                    position: 'relative',
-                                                                    cursor: 'pointer',
-                                                                    transition: 'background 0.3s'
-                                                                }}
-                                                            >
+
+                                                            {item.id === 'whatsapp' && item.value && (
                                                                 <motion.div
-                                                                    animate={{ x: item.value ? 28 : 2 }}
-                                                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                                                    style={{ width: '24px', height: '24px', backgroundColor: 'white', borderRadius: '50%', marginTop: '3px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                                                                />
-                                                            </div>
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    style={{ marginTop: '12px', paddingTop: '16px', borderTop: '1px solid #eee' }}
+                                                                >
+                                                                    <InputField
+                                                                        label="Numéro WhatsApp de destination"
+                                                                        placeholder="Ex: 33612345678"
+                                                                        value={settings.whatsapp_number}
+                                                                        onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                                                                        icon={Smartphone}
+                                                                        desc="Format international sans +, sans espaces (ex: 33600...)"
+                                                                    />
+                                                                    <p style={{ fontSize: '12px', color: COLORS.gray, marginTop: '8px', fontWeight: '500' }}>
+                                                                        C'est le numéro qui recevra les alertes par un lien WhatsApp.
+                                                                    </p>
+                                                                </motion.div>
+                                                            )}
                                                         </motion.div>
                                                     ))}
 
